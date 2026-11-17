@@ -1,0 +1,19 @@
+{
+  "layout:plato": {
+    "cmd-enter": "plato.next",
+    "cmd-alt-enter": "plato.back",
+    "cmd-/": "plato.help",
+    "cmd-shift-p": "app.palette",
+    "cmd-l": "plato.lab",
+    "cmd-shift-c": "plato.data",
+    "cmd-i": "plato.index",
+    "ctrl-cmd-enter": "plato.next1",
+    "ctrl-cmd-alt-enter": "plato.back1",
+    "cmd-shift-g": "plato.glow",
+    "cmd-shift-f": "plato.focus",
+    "cmd-shift-m": "plato.monitor",
+    "cmd-e": "plato.edit",
+    "cmd-shift-e": "plato.edittab",
+    "cmd-w": "plato.close"
+  }
+}

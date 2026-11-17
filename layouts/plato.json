@@ -1,0 +1,32 @@
+{
+  "id": "root",
+  "type": "column",
+  "theme": "plato",
+  "ui_font": "IBM Plex Mono",
+  "titlebar": "none",
+  "traffic_lights": [12, 9],
+  "preview": "layouts/plato.svg",
+  "background": "#0d0703",
+  "children": [
+    { "id": "banner", "type": "block", "size": { "px": 28 }, "window_drag": true,
+      "content": { "mod": "plato", "props": { "role": "banner" } } },
+    { "id": "classroom", "type": "row",
+      "children": [
+        { "id": "left", "type": "column", "size": { "px": 220 }, "min": 160,
+          "children": [
+            { "id": "index", "type": "block", "content": { "mod": "plato", "props": { "role": "index" } } },
+            { "id": "talkomatic", "type": "block", "content": { "mod": "plato", "props": { "role": "talkomatic" } } } ] },
+        { "id": "main", "type": "block", "padding": [2, 2],
+          "content": { "tab": "active",
+            "pane": { "gap": 6, "radius": 2, "background": "background",
+                      "border": { "width": 1, "color": "border" },
+                      "focus": { "width": 1, "color": "accent" }, "lone": true } } },
+        { "id": "right", "type": "column", "size": { "px": 280 }, "min": 200,
+          "children": [
+            { "id": "cal", "type": "block", "size": { "px": 192 }, "content": { "mod": "plato", "props": { "role": "cal" } } },
+            { "id": "notes", "type": "block", "content": { "mod": "plato", "props": { "role": "notes" } } },
+            { "id": "files", "type": "block", "content": { "mod": "plato", "props": { "role": "files" } } } ] } ] },
+    { "id": "keyset", "type": "block", "size": { "px": 32 },
+      "content": { "mod": "plato", "props": { "role": "keyset" } } }
+  ]
+}
