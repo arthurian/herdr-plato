@@ -1,7 +1,7 @@
 // FILES: the project's folder tree in the PLATO look. The project folder is the
 // git root of the focused pane's folder, else that folder, else the last one
 // shown in this space. A click on a folder opens or closes it; a click on a
-// file shows it in the viewer pane.
+// file shows it in the viewer pane. props.title names the panel; without it, "files".
 
 import { div } from "gpui-kit";
 import { v_flex } from "gpui-base";
@@ -11,7 +11,8 @@ import { parseListing, treeRows, dirsToRefresh, projectFolder, notesCwd } from "
 import { openInViewer } from "./viewer.js";
 
 export default class Files {
-  init() {
+  init(p) {
+    this.label = p?.title ?? "files";
     this.root = null;
     this.listings = {};
     this.open = new Set();
@@ -100,7 +101,7 @@ export default class Files {
       : rows.length
         ? v_flex().children(rows.map(row))
         : div().text_color(C.dim).child("empty folder");
-    const title = this.root ? `files · ${this.root.split("/").pop()}` : "files";
+    const title = this.root ? `${this.label} · ${this.root.split("/").pop()}` : this.label;
     return box(title, v_flex().id("files-scroll").flex_1().min_h(0).overflow_y_scrollbar().child(body), "files");
   }
 }

@@ -9,23 +9,31 @@
   "background": "#0d0703",
   "children": [
     { "id": "banner", "type": "block", "size": { "px": 28 }, "window_drag": true,
-      "content": { "mod": "plato", "props": { "role": "banner" } } },
-    { "id": "classroom", "type": "row",
+      "content": { "mod": "plato-banner" } },
+    { "id": "main-row", "type": "row",
       "children": [
-        { "id": "left", "type": "column", "size": { "px": 220 }, "min": 160,
-          "children": [
-            { "id": "index", "type": "block", "content": { "mod": "plato", "props": { "role": "index" } } },
-            { "id": "talkomatic", "type": "block", "content": { "mod": "plato", "props": { "role": "talkomatic" } } } ] },
-        { "id": "main", "type": "block", "padding": [2, 2],
+        { "id": "plato-main", "type": "stack", "active": "line-view", "children": [
+        { "id": "line-view", "type": "row", "children": [
+        { "id": "route", "type": "block", "size": { "px": 260 }, "min": 48,
+          "content": { "mod": "plato-route", "props": { "mode": "line" } } },
+        { "id": "work", "type": "block", "padding": [2, 2],
           "content": { "tab": "active",
             "pane": { "gap": 6, "radius": 2, "background": "background",
                       "border": { "width": 1, "color": "border" },
-                      "focus": { "width": 1, "color": "accent" }, "lone": true } } },
+                      "focus": { "width": 1, "color": "accent" }, "lone": true,
+                      "header": { "content": { "mod": "plato-strip" }, "height": 28,
+                                  "position": "bottom", "reveal": "always" } } }} ] },
+        { "id": "map-view", "type": "block",
+          "content": { "mod": "plato-route", "props": { "mode": "map" } } } ] },
         { "id": "right", "type": "column", "size": { "px": 280 }, "min": 200,
           "children": [
-            { "id": "cal", "type": "block", "size": { "px": 192 }, "content": { "mod": "plato", "props": { "role": "cal" } } },
-            { "id": "notes", "type": "block", "content": { "mod": "plato", "props": { "role": "notes" } } },
-            { "id": "files", "type": "block", "content": { "mod": "plato", "props": { "role": "files" } } } ] } ] },
+            { "id": "signals", "type": "block", "size": { "px": 150 }, "content": { "mod": "plato-signals", "props": { "mode": "signals" } } },
+            { "id": "nowat", "type": "block", "size": { "px": 92 }, "content": { "mod": "plato-nowat" } },
+            { "id": "box", "type": "stack", "active": "box-line", "children": [
+              { "id": "box-line", "type": "column", "children": [
+                { "id": "timetable", "type": "block", "size": { "px": 272 }, "content": { "mod": "plato-timetable" } },
+                { "id": "files", "type": "block", "content": { "mod": "plato", "props": { "role": "files" } } } ] },
+              { "id": "box-map", "type": "block", "content": { "mod": "plato-signals", "props": { "mode": "totals" } } } ] } ] } ] },
     { "id": "keyset", "type": "block", "size": { "px": 32 },
       "content": { "mod": "plato", "props": { "role": "keyset" } } }
   ]

@@ -1,165 +1,99 @@
-// The PLATO keys: what each one does, its binding and its help line.
+// The PLATO keys: what each one does and its binding.
 // The keyset role runs them; the help role lists them.
 
-import { agents, focused, run, shared, setShared, openOverlay, closeOverlay, keys, panes, spaces, layout } from "herdr";
-import { pickNext, backAction, cyclePane, isHidden, focusCommands, currentPlace, dialogAction, closeAction, goToCommand } from "./logic.js";
+import { run, shared, setShared, openOverlay, closeOverlay, keys, layout } from "herdr";
+import { isHidden, focusCommands, dialogAction, closeAction } from "./logic.js";
 
+/** The boxed keys along the bottom, in order. */
 export const KEYS = [
-  { name: "NEXT", cmd: "next", help: "Press NEXT to go to the next shell or agent in this lesson." },
-  { name: "BACK", cmd: "back", help: "Press BACK to go to the one before." },
-  { name: "NEXT1", cmd: "next1", help: "Press NEXT1 to go to the next agent that needs you." },
-  { name: "BACK1", cmd: "back1", help: "Press BACK1 to return to where you were before NEXT1." },
-  { name: "HELP", cmd: "help", help: "Press HELP to see this page." },
-  { name: "TERM", cmd: "term", help: "Press TERM and type the name of any command." },
-  { name: "LAB", cmd: "lab", help: "Press LAB to start a new terminal or agent." },
-  { name: "DATA", cmd: "data", help: "Press DATA to write a quick note." },
-  { name: "FOCUS", cmd: "focus", help: "Press FOCUS to hide or show the side columns." },
+  { name: "NEXT", cmd: "next" },
+  { name: "BACK", cmd: "back" },
+  { name: "NEXT1", cmd: "next1" },
+  { name: "BACK1", cmd: "back1" },
+  { name: "HELP", cmd: "help" },
+  { name: "TERM", cmd: "term" },
+  { name: "LAB", cmd: "lab" },
+  { name: "MAP", cmd: "map" },
+  { name: "JUMP", cmd: "jump" },
+  { name: "FOCUS", cmd: "focus" },
 ];
 
+/** NEXT, BACK, NEXT1, BACK1, SIGN-ON, SIGN-OFF, MAP, JUMP and ALL belong to plato-route, GLOW to plato-banner. */
+const ROUTE = { next: "next", back: "back", next1: "next1", back1: "back1", signon: "sign-on", signoff: "sign-off", closeup: "close-up", map: "map", jump: "jump", all: "all" };
+
+/** The PLATO mod command for a keyset command, or null for one this mod runs. */
+export function routeCommand(cmd) {
+  if (cmd === "glow") return "plato-banner.glow";
+  return ROUTE[cmd] ? `plato-route.${ROUTE[cmd]}` : null;
+}
 
 /** The binding shown for a PLATO command, from the layout:plato section. */
 export function bindingFor(cmd) {
-  const action = cmd === "term" ? "app.palette" : `plato.${cmd}`;
+  const action = cmd === "term" ? "app.palette" : routeCommand(cmd) ?? `plato.${cmd}`;
   return keys().find((k) => k.section === "layout:plato" && k.action === action)?.keys ?? "";
 }
 
-/** INDEX and DATA say where the person is, so HELP can show the right keys. */
-export function setPlace(place) {
-  setShared("plato.place", place ? { place, at: Date.now() } : null);
-}
-
 /** Open a PLATO dialog, or close it if it is already open, so dialogs never stack.
- *  The open overlay id is kept in shared "plato.dialog.<name>". Dialogs are modal:
- *  only their own keys and this toggle close them, so the record stays right. */
+ *  The open overlay id is kept in shared "plato.dialog.<name>", and the dialog reports
+ *  that it is alive in "plato.dialog.<name>.alive" (see alive()). A record without a
+ *  recent report is stale: the dialog closed without a word, so the key opens a new one. */
 export function toggleDialog(name, spec) {
   const key = `plato.dialog.${name}`;
-  const act = dialogAction(shared(key));
+  const act = dialogAction(shared(key), shared(`${key}.alive`), Date.now());
   if (act.close) {
     setShared(key, null);
     return closeOverlay(act.close);
   }
   const id = openOverlay({ ...spec, kind: "dialog", modal: true });
   setShared(key, id);
+  setShared(`${key}.alive`, Date.now());
   return id;
 }
 
-const DIALOGS = ["peek", "help", "data", "index", "monitor", "lesson", "notesfile", "calendar"];
-
-/** MONITOR: look at a terminal in a PLATO dialog, under a title bar that closes it. */
-export function openPeek(terminal) {
-  const key = "plato.dialog.peek";
-  const old = shared(key);
-  if (old) closeOverlay(old);
-  const id = openOverlay({
-    kind: "dialog", modal: true, width: 0.8, height: 0.8,
-    layout: { type: "column", children: [
-      { type: "block", size: { px: 30 }, content: { mod: "plato", props: { role: "peekbar", terminal } } },
-      { type: "block", content: { terminal } },
-    ] },
-  });
-  setShared(key, id);
-  setShared("plato.peekTerminal", terminal);
-  return id;
+/** An open dialog's sign of life, each second while it is shown. */
+export function alive(name, cx) {
+  setShared(`plato.dialog.${name}.alive`, Date.now());
+  cx.timer.after(1000, (cx) => alive(name, cx));
 }
 
-/** Close the MONITOR view and go to its terminal (GO TO, or NEXT while it is open). */
-export function goToPeek() {
-  const id = shared("plato.dialog.peek");
-  const cmd = goToCommand(shared("plato.peekTerminal") ?? null, agents(), panes());
-  setShared("plato.dialog.peek", null);
-  if (id) closeOverlay(id);
-  if (cmd) run(cmd[0], cmd[1]);
-}
+/** The dialogs this mod opens (SIGN-ON and SIGN-OFF belong to plato-route). */
+const DIALOGS = ["help"];
 
 /** A dialog closed itself (Esc, a choice, Enter): forget its id. */
 export function dialogClosed(name) {
   setShared(`plato.dialog.${name}`, null);
+  setShared(`plato.dialog.${name}.alive`, null);
 }
 
-/** True while FOCUS has the side columns hidden. */
+/** True while FOCUS is on: the right column hidden and the route narrowed. */
 export function focusOn() {
-  return isHidden(layout(), "left");
+  return isHidden(layout(), "right");
 }
 
-export function openIndexDialog() {
-  return toggleDialog("index", { mod: "plato", props: { role: "index", dialog: true }, width: 360, height: Math.min(520, 130 + spaces().length * 23) });
-}
-
-export async function perform(cmd) {
-  const f = focused();
+export async function perform(command) {
+  const route = routeCommand(command);
+  if (route) return run(route);
+  const [cmd, arg] = command.split(":");
   switch (cmd) {
-    case "next":
-      if (shared("plato.dialog.peek")) return goToPeek(); // NEXT in a MONITOR view: go there
-    // falls through
-    case "back": {
-      const pane = cyclePane(spaces().find((s) => s.active), panes(), f?.pane ?? null, cmd === "next" ? 1 : -1);
-      if (pane) run("pane.focus", { pane });
-      return;
-    }
-    case "next1": {
-      const target = pickNext(agents(), f?.terminal ?? null);
-      if (!target) return run("agent.next");
-      if (f?.terminal && f.terminal !== target) setShared("plato.back", f.terminal);
-      return run("agent.focus", { terminal: target });
-    }
-    case "back1": {
-      const [name, args] = backAction(shared("plato.back") ?? null, agents(), panes());
-      setShared("plato.back", null);
-      return run(name, args);
-    }
-    case "help": {
-      const place = currentPlace(shared("plato.place"), Date.now(), focusOn());
-      return toggleDialog("help", { mod: "plato", props: { role: "help", place }, width: 680, height: 580 });
-    }
-    case "edit": {
-      // A choosing INDEX or TALKOMATIC (column or dialog) arms EDIT for its next letter
-      // or number. Dialogs get no key commands, so the request goes through shared state.
-      const place = currentPlace(shared("plato.place"), Date.now(), focusOn());
-      if (place === "index" || place === "monitor") return setShared("plato.edit", { at: Date.now(), arm: true });
-      if (focusOn()) return toggleDialog("index", { mod: "plato", props: { role: "index", dialog: true, edit: true }, width: 360, height: Math.min(520, 130 + spaces().length * 23) });
-      return setShared("plato.edit", { at: Date.now(), arm: false }); // rename this lesson in the INDEX column
-    }
-    case "edittab":
-      if (focusOn()) return toggleDialog("monitor", { mod: "plato", props: { role: "talkomatic", dialog: true, editTab: true }, width: 380, height: 360 });
-      return setShared("plato.edit", { at: Date.now(), arm: false, tab: true }); // TALKOMATIC edits this tab
-    case "calendar":
-      return toggleDialog("calendar", { mod: "plato", props: { role: "calendar" }, width: 760, height: 330 });
-    case "notesfile":
-      return toggleDialog("notesfile", { mod: "plato", props: { role: "notesfile" }, width: 720, height: 520 });
-    case "lesson":
-      return toggleDialog("lesson", { mod: "plato", props: { role: "lesson" }, width: 720, height: 420 });
+    case "help":
+      // "help:words" opens HELP on its WORDS screen.
+      return toggleDialog("help", { mod: "plato", props: { role: "help", screen: arg ?? null }, width: 680, height: 560 });
     case "term":
       return run("app.palette");
     case "lab":
+      // The map is open: LAB is for the space under its cursor.
+      if (shared("plato.map")) return run("plato-route.lab");
       return openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 });
     case "focus":
       for (const [name, args] of focusCommands(focusOn())) run(name, args);
       return;
-    case "monitor": {
-      // An open peek: MONITOR closes it (TALKOMATIC sees the fresh close and stays out).
-      const peek = shared("plato.dialog.peek");
-      if (peek) {
-        setShared("plato.dialog.peek", null);
-        setShared("plato.peekClosed", Date.now());
-        return closeOverlay(peek);
-      }
-      // TALKOMATIC is hidden in focus mode and gets no commands, so open it as a dialog.
-      if (focusOn()) toggleDialog("monitor", { mod: "plato", props: { role: "talkomatic", dialog: true }, width: 380, height: 360 });
-      return;
-    }
     case "close": {
       // CLOSE (cmd-w): close the open PLATO dialogs; with none open, close the tab as usual.
-      const act = closeAction(Object.fromEntries(DIALOGS.map((d) => [`plato.dialog.${d}`, shared(`plato.dialog.${d}`)])));
+      const open = DIALOGS.map((name) => ({ name, id: shared(`plato.dialog.${name}`), aliveAt: shared(`plato.dialog.${name}.alive`) }));
+      const act = closeAction(open, Date.now());
       if (act.tab) return run("tab.close");
-      for (const [name, id] of act.close) { setShared(`plato.dialog.${name}`, null); closeOverlay(id); }
-      setShared("plato.place", null);
+      for (const [name, id] of act.close) { dialogClosed(name); closeOverlay(id); }
       return;
     }
-    case "index":
-      // The INDEX column is hidden in focus mode and gets no commands, so open it as a dialog.
-      if (focusOn()) openIndexDialog();
-      return;
-    case "data":
-      return toggleDialog("data", { mod: "plato", props: { role: "data" }, width: 680, height: 300 });
   }
 }

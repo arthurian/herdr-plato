@@ -1,4 +1,4 @@
-// PLATO drawing kit: orange plasma colors, the IBM Plex Mono font and boxed panels,
+// PLATO drawing kit: the theme's colors, the IBM Plex Mono font and boxed panels,
 // shared by every role of the plato mod.
 
 import { div } from "gpui-kit";
@@ -38,13 +38,6 @@ export function inv(el) {
   return el.bg(C.fg).text_color(C.inv);
 }
 
-export function label(text, o = {}) {
-  let el = div().child(String(text ?? ""));
-  if (o.color) el = el.text_color(o.color);
-  if (o.truncate) el = el.truncate();
-  return el;
-}
-
 /** "cmd-shift-enter" -> "⌘⇧↩", for showing a key binding. */
 export function shortcut(binding) {
   if (!binding) return "";
@@ -56,17 +49,4 @@ export function shortcut(binding) {
 export function bar(id, edge, child) {
   const el = h_flex().id(id).size_full().items_center().px(8).gap(10).border_color(C.fg);
   return (edge === "bottom" ? el.border_b(1) : el.border_t(1)).child(child);
-}
-
-/** A one-line input: the text with a PLATO cursor (reverse video on a character,
- *  a blinking block at the end). line is {text, cursor}. */
-export function lineInput(line, placeholder = "") {
-  const t = line.text, c = line.cursor;
-  const el = h_flex().min_w(0).child(div().whitespace_nowrap().child(t.slice(0, c)));
-  const cursor = c < t.length
-    ? inv(div().whitespace_nowrap().child(t[c]))
-    : div().w(8).h(16).bg(C.fg).loop("opacity", { from: 0, to: 1, period: 1060 });
-  const rest = div().whitespace_nowrap().child(t.slice(c + 1));
-  const hint = !t && placeholder ? div().text_color(C.dim).whitespace_nowrap().child(placeholder) : null;
-  return el.child(cursor).child(rest).when(Boolean(hint), (x) => x.child(hint));
 }
