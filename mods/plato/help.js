@@ -3,15 +3,10 @@
 
 import { div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { props, closeOverlay, keys } from "herdr";
-import { C, shortcut } from "./kit.js";
-import { bindingFor, dialogClosed, alive } from "./keys.js";
-import { helpScreens, helpKey } from "./logic.js";
-
-/** The binding of a Herdr command, from any section of keys.json. */
-function bindingOfAction(action) {
-  return keys().find((k) => k.action === action)?.keys ?? "";
-}
+import { props, closeOverlay } from "herdr";
+import { C } from "./look.js";
+import { keyText, dialogClosed, alive } from "./keys.js";
+import { helpScreens, helpKey, ownEnter } from "./logic.js";
 
 export default class Help {
   init(_p, cx) {
@@ -32,7 +27,6 @@ export default class Help {
     const screens = helpScreens();
     const n = screens.length;
     const screen = screens[this.i];
-    const keyText = (k) => (k?.cmd ? shortcut(bindingFor(k.cmd)) : k?.action ? shortcut(bindingOfAction(k.action)) : "");
     const name = (s, j) => {
       const el = div().id(`help-${s.name}`).px(4).cursor_pointer().on_click((_e, cx) => { this.i = j; cx.notify(); }).child(s.name);
       return j === this.i ? el.bg(C.fg).text_color(C.bg) : el.text_color(C.dim).hover((st) => st.text_color(C.bright));
@@ -41,6 +35,7 @@ export default class Help {
     const back = this.i > 0 ? `← ${screens[this.i - 1].name.toLowerCase()} · ` : "";
     return v_flex().id("help").track_focus(this.h)
       .on_key_down((e, cx) => {
+        if (!ownEnter(e.modifiers)) return; // cmd chords are layout keys
         const r = helpKey(this.i, e.key, n);
         if (!r) return;
         if (r.close) this.close();

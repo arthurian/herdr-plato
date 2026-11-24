@@ -19,14 +19,14 @@ export function parseListing(out) {
     .sort((a, b) => (a.dir !== b.dir ? (a.dir ? -1 : 1) : a.name.localeCompare(b.name, undefined, { sensitivity: "base" })));
 }
 
-/** Flatten the open part of the tree. listings: relative dir ("" is the root) -> entries. */
-export function treeRows(listings, open, dir = "", depth = 0) {
+/** Flatten the open part of the folder tree. listings: relative dir ("" is the root) -> entries. */
+export function folderRows(listings, open, dir = "", depth = 0) {
   const rows = [];
   for (const e of listings[dir] ?? []) {
     const path = dir ? `${dir}/${e.name}` : e.name;
     const isOpen = e.dir && open.has(path);
     rows.push({ path, name: e.name, depth, dir: e.dir, open: isOpen });
-    if (isOpen) rows.push(...treeRows(listings, open, path, depth + 1));
+    if (isOpen) rows.push(...folderRows(listings, open, path, depth + 1));
   }
   return rows;
 }
@@ -51,28 +51,28 @@ export function dirsToRefresh(paths, root, shown) {
 }
 
 /** Whether the layout node with this id is hidden. */
-export function isHidden(tree, id) {
-  if (!tree || typeof tree !== "object") return false;
-  if (tree.id === id) return Boolean(tree.hidden);
-  return (tree.children ?? []).some((c) => isHidden(c, id));
+export function isHidden(layout, id) {
+  if (!layout || typeof layout !== "object") return false;
+  if (layout.id === id) return Boolean(layout.hidden);
+  return (layout.children ?? []).some((c) => isHidden(c, id));
 }
 
 /** The layout node with this id, or null. */
-export function findNode(tree, id) {
-  if (!tree || typeof tree !== "object") return null;
-  if (tree.id === id) return tree;
-  for (const c of tree.children ?? []) { const n = findNode(c, id); if (n) return n; }
+export function findNode(layout, id) {
+  if (!layout || typeof layout !== "object") return null;
+  if (layout.id === id) return layout;
+  for (const c of layout.children ?? []) { const n = findNode(c, id); if (n) return n; }
   return null;
 }
 
 /** The keyset's padding, so its keys center under the terminal and not the whole window:
- *  the route's width on the left while the line shows (not in the map), and the right
+ *  the route's width on the left while the line shows (not in the agenda), and the right
  *  column's width unless FOCUS hides it. */
-export function keysetPad(tree) {
+export function keysetPad(layout) {
   const px = (n) => (n && !n.hidden && typeof n.size?.px === "number" ? n.size.px : 0);
-  const main = findNode(tree, "plato-main");
+  const main = findNode(layout, "plato-main");
   const lineShown = !main || (main.active ?? "line-view") === "line-view";
-  return { left: lineShown ? px(findNode(tree, "route")) : 0, right: px(findNode(tree, "right")) };
+  return { left: lineShown ? px(findNode(layout, "route")) : 0, right: px(findNode(layout, "right")) };
 }
 
 /** The route's width, and its width as a column of space squares in focus mode. */
@@ -80,7 +80,7 @@ export const ROUTE_PX = 260;
 export const ROUTE_SLIM_PX = 56;
 
 /** FOCUS: hide the right column and narrow the route, or undo both when focus is on.
- *  The route stays shown, or NEXT, BACK, NEXT1 and the map (its commands) would stop. */
+ *  The route stays shown, or NEXT, BACK, NEXT1 and the agenda (its commands) would stop. */
 export function focusCommands(focusOn) {
   const name = focusOn ? "layout.show" : "layout.hide";
   return [[name, { id: "right" }], ["layout.resize", { id: "route", px: focusOn ? ROUTE_PX : ROUTE_SLIM_PX }]];
@@ -108,9 +108,9 @@ const KEY_ROWS = [
   ["BACK", { cmd: "back" }, "Go to the tab before this one on the line."],
   ["NEXT1", { cmd: "next1" }, "Go to the agent that has waited longest for you."],
   ["BACK1", { cmd: "back1" }, "Return to where you were before."],
-  ["MAP", { cmd: "map" }, "Show every space as a column of tab cards."],
-  ["JUMP", { cmd: "jump" }, "Type a tab code (c3) to go there."],
-  ["ALL", { cmd: "all" }, "Show every space's tabs on the route."],
+  ["AGENDA", { cmd: "agenda" }, "Show each space's day: TODAY's hours, or the WEEK."],
+  ["JUMP", { cmd: "jump" }, "Find a tab by its code, name or purpose."],
+  ["TREE", { cmd: "tree" }, "Show every space's tabs on the route, as a tree."],
   ["PICKER", { action: "mod.open:picker" }, "Herdr's picker: find a tab by its name."],
   ["SIGN-ON", { cmd: "signon" }, "Open a new space."],
   ["SIGN-OFF", { cmd: "signoff" }, "Close this space, after a summary."],
@@ -118,11 +118,15 @@ const KEY_ROWS = [
   ["RENAME", { action: "space.rename" }, "Rename this space. Its letter stays."],
   ["RENAME TAB", { action: "tab.rename" }, "Rename this tab."],
   ["LAB", { cmd: "lab" }, "Add a tab to this space."],
+  ["PURPOSE", { cmd: "purpose" }, "Set what this tab is for."],
+  ["DUE", { cmd: "due" }, "Set or clear this space's due date."],
   ["TERM", { cmd: "term" }, "Herdr's command palette: any command by name."],
-  ["GLOW", { cmd: "glow" }, "Glow: orange, amber, green, white, nord, mocha."],
+  ["GLOW", { cmd: "glow" }, "Step the glow: four modern, four classic."],
   ["FOCUS", { cmd: "focus" }, "Narrow the route and hide the right column."],
   ["HELP", { cmd: "help" }, "Show these keys."],
+  ["KEYS", { cmd: "keys" }, "Then one letter runs any PLATO command."],
   ["CLOSE", { cmd: "close" }, "Close a PLATO dialog, else the tab."],
+  ["MOUSE", "", "Right-click: a menu. Hover: a tab's detail."],
 ];
 
 const WORD_ROWS = [
@@ -132,8 +136,9 @@ const WORD_ROWS = [
   ["WAITING", "", "A space with an agent that needs you. SIGNALS, at the top right, lists them in NEXT1 order."],
   ["the route", "", "The dashed line shows where NEXT1 goes. The ▼ on the line shows where NEXT goes."],
   ["SIGNAL", "", "In FOCUS, a flashing line above the keys names another agent that needs you. Press NEXT1."],
-  ["in the map", "", "Type a code to select its card, then Enter goes. The Space bar peeks at the tab under the ▶ cursor. LAB and SIGN-OFF act on its space. Esc closes the map."],
-  ["JUMP", "", "A letter and Enter goes to that space's active tab. Esc, or a few seconds without a key, cancels."],
+  ["in the agenda", "", "Tab switches TODAY and WEEK. The arrows move the ▶ cursor, and Enter goes to its tab. The Space bar opens LOOK for that tab before you go. LAB, SIGN-OFF and SET DUE act on its space. Esc closes the agenda."],
+  ["JUMP", "", "Type a code, a name, a purpose or a folder. Enter goes to the lit row. Tab shows one group. Esc closes."],
+  ["purpose", "", "What a tab is for, on its strip, in LOOK and in JUMP. Yours (set with PURPOSE) comes first, then the agent's, then the session's first prompt."],
 ];
 
 /** HELP's screens, in order. */
@@ -151,13 +156,65 @@ export function helpKey(i, key, n) {
   return null;
 }
 
-/** How long a dialog counts as open after its last sign of life (it reports each second). */
-export const ALIVE_MS = 2500;
+/** The right-click menu of a space (its square or name on the route, its column head in
+ *  the agenda): [{ id, name, key }], each item a PLATO key that already exists. key is { cmd }
+ *  for a PLATO command, { action } for a Herdr command, or { text } for a plain key. A free
+ *  letter offers SIGN-ON there. CLOSE UP shows only while the line has free letters. */
+export function spaceMenu({ free, freeLetters }) {
+  const items = free
+    ? [{ id: "sign-on", name: "SIGN-ON here", key: { cmd: "signon" } }]
+    : [
+      { id: "rename", name: "RENAME", key: { action: "space.rename" } },
+      { id: "lab", name: "LAB", key: { cmd: "lab" } },
+      { id: "due", name: "SET DUE…", key: { cmd: "due" } },
+      { id: "sign-off", name: "SIGN-OFF", key: { cmd: "signoff" } },
+    ];
+  if (freeLetters > 0) items.push({ id: "close-up", name: "CLOSE UP", key: { cmd: "closeup" } });
+  return items;
+}
+
+/** The right-click menu of a tab (a route row or dot, an agenda card). GO is left out where you
+ *  already are. LOOK is the agenda's Space bar, so only the agenda shows that key for it. */
+export function tabMenu({ current, inAgenda }) {
+  const items = [];
+  if (!current) items.push({ id: "go", name: "GO", key: { text: "↩" } });
+  items.push({ id: "look", name: "LOOK", key: { text: inAgenda ? "space" : "" } });
+  items.push({ id: "rename-tab", name: "RENAME TAB", key: { action: "tab.rename" } });
+  items.push({ id: "purpose", name: "SET PURPOSE…", key: { cmd: "purpose" } });
+  return items;
+}
+
+/** Enter belongs to a dialog unless cmd is held: the cmd-enter chords are layout keys (NEXT
+ *  and BACK), which the route handles or hands to a sign dialog. A dialog that acted
+ *  on them too closed or went, and then the route moved again. */
+export function ownEnter(mods) {
+  return !mods?.platform;
+}
+
+/** The route's moves, which wait while LOOK, JUMP, HELP or a right-click menu is open, so a
+ *  key never moves you behind a dialog. open: the names of the dialogs open now. */
+const MOVES = ["next", "back", "next1", "back1"];
+export function moveHeld(c, open) {
+  return MOVES.includes(c) && open.length > 0;
+}
+
+/** How often an open dialog reports its sign of life, and how long it counts as open after
+ *  the last one. Herdr closes a dialog on Esc without telling the mod, so the agenda takes the
+ *  keyboard back only once the dialog counts as closed: keys before that are lost. Short, but
+ *  room for two missed beats, so a slow frame never closes an open dialog. */
+export const BEAT_MS = 250;
+export const ALIVE_MS = 750;
 
 /** Whether a dialog record is a dialog that is still open: it has an id and reported
  *  recently. A dialog that closed without a word (a mod reload) leaves a stale record. */
 export function dialogLive(openId, aliveAt, now) {
   return Boolean(openId) && aliveAt != null && now - aliveAt < ALIVE_MS;
+}
+
+/** A sign dialog's record ({ id, page, ... } in plato.dialog.sign) while that dialog reports
+ *  alive, else null: a record left by a dialog that closed without a word is no dialog. */
+export function liveRecord(record, aliveAt, now) {
+  return record && dialogLive(record.id, aliveAt, now) ? record : null;
 }
 
 /** PLATO dialogs are toggles: with the dialog open, the key closes it; with no dialog or
@@ -171,4 +228,24 @@ export function dialogAction(openId, aliveAt, now) {
 export function closeAction(dialogs, now) {
   const open = (dialogs ?? []).filter((d) => dialogLive(d.id, d.aliveAt, now)).map((d) => [d.name, d.id]);
   return open.length ? { close: open } : { tab: true };
+}
+
+/** How long the banner shows a notice, as long as the glow's name stays bright. */
+export const NOTICE_MS = 2000;
+
+/** A notice's text while it is new ({ text, at } in plato.notice), else null. */
+export function noticeLive(notice, now) {
+  return notice?.text && now - notice.at < NOTICE_MS ? notice.text : null;
+}
+
+/** Whether the banner should clear a notice: its time is over. */
+export function noticeStale(notice, now) {
+  return Boolean(notice) && !noticeLive(notice, now);
+}
+
+/** Whether the keys panel closed without running a row (Esc, ctrl-g, an undefined key, a
+ *  click beside it) since the agenda saw it open: then the agenda takes the keyboard back.
+ *  back: shared plato.keys.back { at }. A row may open a dialog, so then it does not. */
+export function keysGaveBack(back, since) {
+  return Boolean(back) && back.at >= since;
 }

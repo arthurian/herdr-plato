@@ -1,132 +1,369 @@
 # PLATO for Herdr
 
-This repo has a layout, six themes and a set of mods for the [Herdr](https://herdr.dev) app. They are inspired by the PLATO system and by Brian Dear's book "The Friendly Orange Glow". The window glows orange on a warm black, or in amber, green or white like other classic terminals. For people who want the same keys and layout with a modern look, two more glows use the [Nord](https://www.nordtheme.com) and [Catppuccin Mocha](https://catppuccin.com) palettes.
+PLATO is a layout for the [Herdr](https://herdr.dev) app. It helps you keep track of many terminals and coding agents at once. Every project gets a letter, and every tab gets a short code such as `c3`. One key takes you to the agent that waited longest for you.
 
-PLATO draws your spaces as a line. Each Herdr space has a fixed letter (a, b, c). Each tab has a code made of its space's letter and its number: `c3` is the third tab of space c. A split tab adds the pane: `c3.2`. The route shows every space. It draws where NEXT1 goes before you press it.
+The idea comes from the PLATO computer system of the 1970s and from Brian Dear's book "The Friendly Orange Glow". PLATO starts in Tokyo Night colors, with orange as the signal that an agent needs you, and it has [eight glows](#the-glows) in all.
 
-![PLATO in orange: the route on the left with two spaces WAITING, an agent in the middle, and SIGNALS listing both waiting agents, NOW AT, TODAY and FILES on the right](preview.png)
+![PLATO in Tokyo Night. The route on the left shows two spaces WAITING. An agent works in the middle. On the right, SIGNALS lists both waiting agents, above NOW AT, TODAY and FILES.](preview.png)
 
-| The map (`cmd-i`) | Arrival after a jump |
+## Quick start
+
+You need the [Herdr](https://herdr.dev) desktop app on macOS. The install script also uses `python3` and `rsync`, which come with macOS.
+
+1. Get PLATO and open a terminal in its folder:
+
+   ```sh
+   git clone https://github.com/arthurian/herdr-plato.git
+   cd herdr-plato
+   ```
+
+2. Install PLATO and switch Herdr to it:
+
+   ```sh
+   ./install.sh
+   herdr-app do layout.switch --name plato
+   ```
+
+3. Try these keys:
+   - `cmd-n` (SIGN-ON): open a new space for a project. Type a name, and press `cmd-enter`. A folder is optional.
+   - `cmd-enter` (NEXT): go to the next tab.
+   - `cmd-]` (NEXT1): go to the agent that waited longest for you.
+   - `cmd-shift-a` (AGENDA): see your day and week across your spaces.
+   - `cmd-/` (HELP): see all the keys and words.
+
+### Stop using PLATO
+
+To go back to Herdr's default layout, run:
+
+```sh
+herdr-app do layout.switch --name main
+```
+
+Your spaces and tabs stay as they are. To come back, run the same command with `--name plato`. To remove PLATO completely, see [Uninstall](#uninstall).
+
+## The idea in a minute
+
+Herdr keeps your terminals in spaces and tabs. A space usually holds one project. A tab holds one terminal, or a few panes side by side. An agent is a coding assistant, such as Claude Code, that runs in a terminal.
+
+PLATO adds a few ideas on top:
+
+- Letters: each space gets a fixed letter, a, b, c and so on. A letter never changes by itself. When you close a space in the middle, its letter stays free, so the other spaces keep theirs.
+- Codes: each tab has a code made of its space's letter and its number. `c3` is the third tab of space c. A tab split into panes adds the pane: `c3.2`.
+- The line: the spaces in letter order. NEXT walks along it, tab by tab. You always know what comes next.
+- Waiting: an agent that is blocked, or that finished and you have not looked yet, waits for you. PLATO marks it, counts it, and NEXT1 takes you there.
+- Purpose: a short line that says what a tab is for, such as "Fix the login timeout in the API". You or the agent can set it.
+
+## A tour of the screen
+
+- The banner at the top says where you are, how many agents need you, and the time.
+- The route on the left shows the line. The current space lists its tabs. Each other space shows one dot per tab, and a dot that waits for you pulses.
+- The work area in the middle shows the current tab. A strip under each pane gives its code, its git branch, the agent's progress and its state. While an agent needs you, it also says what the agent waits to do.
+- The right column has four panels. SIGNALS lists who needs you. NOW AT shows where your keys go now, the tab's purpose and your last prompt there. TODAY shows who waited on you today. FILES shows the project's folder tree.
+- The keyset along the bottom shows the PLATO keys. A click on a key runs it.
+
+PLATO works by mouse too. A click on anything that says an agent needs you takes you there. A right-click on a space or a tab opens a menu of its actions.
+
+| The agenda (`cmd-shift-a`) | Arrival after a jump |
 | --- | --- |
-| ![The map: a column per space and its tabs as cards in rows, with NEXT, NEXT1 and WAITING tags. The header says 2 more spaces lie to the left, the GO box at the bottom shows a typed letter with the keys for the selected card, and SIGNALS, NOW AT and MAP TOTALS are on the right](previews/map.png) | ![The arrival banner, the strip in reverse video and NOW AT marked "changed" after NEXT1](previews/arrival.png) |
+| ![The agenda's TODAY view. Each space is a column with its due date and its day in words, or a QUIET tag. Under each head, a box of today's hours shows where agents ran, waited on you (WAIT) and where you were. The tabs hang under the box. The header has TODAY and WEEK and counts 7 spaces and 19 tabs. On the right, SIGNALS, NOW AT and the DUE list.](previews/agenda.png) | ![The arrival banner, the strip in reverse video and NOW AT marked "changed" after NEXT1](previews/arrival.png) |
 | NEXT1 drawn on the route | Sign-on |
-| ![The route with a dashed NEXT1 run to the agent that has waited longest, in another space; a second waiting agent in this space shows its bright lamp, and both spaces have WAITING tags](previews/next1.png) | ![SIGN-ON: the letter the new space takes, its name, the folder it found and an optional due date](previews/sign-on.png) |
-| Focus mode (`cmd-shift-f`) | |
-| ![Focus mode: the route narrowed to a column of lettered squares with WAIT under a waiting space, the right column hidden, and a flashing SIGNAL line above the keys](previews/focus.png) | |
-
-Four glows from the screens of the 1970s and 80s, and two modern ones, Nord and Catppuccin Mocha:
-
-| PLATO orange (the default) | Amber |
-| --- | --- |
-| ![PLATO in orange](previews/main-orange.png) | ![PLATO in amber](previews/main-amber.png) |
-| Green | Paper white |
-| ![PLATO in green](previews/main-green.png) | ![PLATO in paper white](previews/main-white.png) |
-| Nord | Catppuccin Mocha |
-| ![PLATO in Nord: frost blue lines and text on Nord's dark gray, with Nord's yellow for what needs you](previews/main-nord.png) | ![PLATO in Catppuccin Mocha: mauve lines and text on Mocha's dark base, with peach for what needs you](previews/main-mocha.png) |
+| ![The route with a dashed NEXT1 run to the agent that waited longest, in another space. A second waiting agent in this space shows its bright lamp. Both spaces have WAITING tags.](previews/next1.png) | ![SIGN-ON: the letter the new space takes, its name, an optional folder and an optional due date](previews/sign-on.png) |
+| Focus mode (`cmd-shift-f`) | LOOK (the Space bar in the agenda) |
+| ![Focus mode. The route is a column of lettered squares, with WAIT under a waiting space. The right column is hidden. A flashing SIGNAL line shows above the keys.](previews/focus.png) | ![LOOK over the agenda for a waiting agent: the code, space and tab with a NEEDS YOU badge, that NEXT1 goes there first, its purpose from the first prompt, and the last prompt, sent 38 minutes ago. Below are the folder, the space with its due date, today and sub-agents, and the keys to go or close.](previews/look.png) |
 
 The spaces, tabs and agents in these pictures are made up for the demo.
 
-## What you get
+## Everyday tasks
 
-- ROUTE: the line of spaces on the left. Each space is a square on the line with its letter inside. The letter never moves on its own. Under the current space you see its tabs, each with a round lamp, its program and its state. A ring around a lamp marks the tab you are at. Under the other spaces you see one dot per tab. A filled dot is an agent that works or waits for you. A hollow dot is idle. A dot that waits for you pulses, and its space has a WAITING tag in reverse video. A click on a space, a dot or a tab goes there. ALL (`cmd-shift-i`) shows every space's tabs instead of dots, one line each (code, program such as claude or zsh, and state), for a look at the whole line without the map. Press it again to go back. The route's title shows ALL in reverse video while it is on.
-- NEXT (`cmd-enter`): go to the next tab on the line. After the last one it wraps to space a. A small ▼ on the route's line points the way NEXT goes.
-- NEXT1 (`cmd-shift-enter`, as SHIFT-NEXT on a PLATO keyboard): go to the agent that waits longest for you. Agents that are blocked come first, then agents that are done but not seen. The route draws the way first, as a dashed line from your tab to the target, with the word NEXT1 on the target's row.
-- BACK (`cmd-alt-enter`): go to the tab before this one on the line, NEXT's mirror. Before the first tab it wraps to the last. The readout names its target.
-- BACK1 (`cmd-shift-alt-enter`, SHIFT-BACK on a PLATO keyboard): return to where you were before, however you got there (NEXT1, JUMP, the map, a click). Pressed twice, it takes you back and forth between your last two places. The readout at the bottom of the route names the targets of NEXT, BACK, NEXT1 and BACK1.
-- The strip: a line under every pane. It shows the space's letter in a circle, the tab code and `space › tab › program`. It also shows the time since your last prompt there, and the state with its time.
-- Arrival: after every move, the top banner says "ARRIVED AT f1 meridian · docs from e2". The strip turns to reverse video and says "arrived from e2". Both go away after 4 seconds, or as soon as you send a prompt there.
-- The banner: "PLATO · space e compass · tab 1 api" on the left. On the right, how many other agents need you, the date and the clock.
-- SIGN-ON (`cmd-n`): open a new space. Type a name or a folder path, then press NEXT. SIGN-ON shows the letter the space takes. This is the first free letter, and → puts the space at the end of the line. It also shows the folder it found and an optional due date (`fri`, `27`, `11/27`, `+5`).
-- SIGN-OFF (`cmd-alt-w`): close the current space. SIGN-OFF shows a summary first: the time open, its tabs, the due date, and what happens to the line. Only NEXT closes the space. NEXT1 also closes it and goes to the agent that waits for you. BACK keeps it open. A space in the middle leaves a free letter, so the other spaces keep theirs. On SIGN-OFF, `U` closes up the line instead and gives the later spaces new letters. CLOSE UP (`cmd-u`) does the same at any time. It lists the free letters and the moves first, and only NEXT closes up the line. Free letters at the end of the line are removed.
-- SIGNALS: the top of the right column. It lists the agents that need you, in NEXT1 order, with how long each waited. The first row, in reverse video, is where NEXT1 goes.
-- NOW AT: under SIGNALS, two lines. It shows where your keys go now (the tab code, space, tab and state) and the last prompt you sent there. After a jump it says "changed".
-- TODAY: who waited on you today, and for how long. The graph shows the last two hours that the app was open, ending at now. A click on "last 2h" in the title steps it to 6, 12 or 24 hours and back, reaching into yesterday when the window needs it, with one row per space letter. A bar shows where an agent ran, a thin line shows idle time, and a hollow box shows where an agent waited for you. A bright line shows the path you took between spaces. A short gap with a dim line marks a time when the app was closed. At the right end of each row are today's totals: how long the space ran, and how long it waited for you, in a hollow box. Under the graph, the response line says how many waits you answered today, the typical one and the longest, for example "6 waits answered · typical 3m · longest 21m at d2". The due list shows only when a space has a due date. A click on a row's letter or totals goes to that space. A click on a wait box goes to the tab that waited. When an agent's state or your tab changes, the panel writes to a small file per day, `~/.config/herdr-app/plato-data/YYYY-MM-DD.json`. It does not write on a timer.
-- FILES: the folder tree of the project you are in (the git root of the focused terminal's folder). A click on a folder opens it. A click on a file shows it in a viewer pane.
-- MAP (`cmd-i`): show every space over the route and the terminal. Each space is a column. Its head is a large letter in a circle, the space name and a line about its day ("ran 1h 40m today · last active 3m ago"). Each tab hangs down the column as a card. A card shows a signal lamp, the code and name, the program, the state and time, and the last prompt you sent. The card you are at is in reverse video. Agents that need you have a WAITING or DONE tag. The NEXT and NEXT1 targets are tagged too. A free letter keeps a dashed column, so no other column moves. When not all spaces fit, the map shows the ones that do, with `◀ 2 more` and `1 more ▶` in its header. The arrows bring the others into view, and so does a click on a marker. On the right, MAP TOTALS takes the place of TODAY and FILES. It counts spaces, free letters, tabs and their states.
-- Keys in the map: type a tab code such as `c3` to select its card, so you see where you will land, then press Enter to go. A letter alone selects that space's first card. Backspace steps back the same way, and with the code gone, it selects where you are. The arrows move the ▶ cursor, and the map scrolls to keep it in view. The Space bar peeks at the tab under the cursor. LAB and SIGN-OFF act on the space under the cursor. Select a free letter and press Enter to sign on there. Esc or `cmd-i` closes the map. Any move closes it first.
-- JUMP (`cmd-j`): the map's codes without the map. Press `cmd-j`, then a code such as `c3`, and you go there as soon as one tab matches. A letter and Enter goes to that space's active tab. The route's readout shows what you typed and where it goes. Esc, `cmd-j` again, or four seconds without a key cancels. A free letter does nothing.
-- FOCUS (`cmd-shift-f`): hide the right column and narrow the route to a column of lettered squares. The current space is filled, and a space with an agent that waits for you pulses and has a WAIT tag. If an agent in another tab needs you, a flashing SIGNAL line shows above the keys. Press FOCUS again to bring the columns back. NEXT, BACK, NEXT1 and the map keep working.
-- HELP (`cmd-/`): two screens, one at a time. KEYS lists every PLATO key with one line each, and Herdr's own picker (`cmd-p`, a tab by its name), command palette (TERM, `cmd-shift-p`) and rename keys (`shift-F2` for a space, which keeps its letter, and `F2` for a tab). WORDS explains the letter, the code, the free letter, WAITING, the route's marks, SIGNAL, the map and JUMP. → or Enter shows the next screen, ← the one before, 1 or 2 goes straight there, and a click on a name works too.
-- GLOW (`cmd-shift-g`, or a click on PLATO in the banner): step the glow from orange to amber, green, white, Nord, Mocha, and back to orange. The banner names the current glow in dim text after PLATO, for example "PLATO amber". The name is bright for two seconds after a change.
-- The keyset along the bottom: NEXT, BACK, NEXT1, BACK1, HELP, TERM, LAB, MAP, JUMP and FOCUS as boxed keys, each with its shortcut. A click runs the key. The route's title also shows the ALL and MAP keys.
+- Start work on a project: press `cmd-n`, type the project's name, and press `cmd-enter`. SIGN-ON shows the letter the space will take. You can add a folder, such as `~/dev/project`, and a due date, such as `fri` or `+5`. To set or change the due date later, press `cmd-shift-e` (DUE).
+- Add a terminal or agent to the project: press `cmd-l` (LAB).
+- See who needs you: look at SIGNALS, or press `cmd-]` (NEXT1) to go to the agent that waited longest.
+- Go to a tab you know: press `cmd-j`, then type its code, such as `c3`, and press Enter.
+- See your day: open the agenda with `cmd-shift-a`. For each space, it shows when the agents ran or waited on you, your time there, and the due date. Press Tab for the week.
+- Look at an agent before you go there: open the agenda with `cmd-shift-a`, select its tab, and press the Space bar (LOOK). LOOK shows the purpose, the last prompt you sent and how long the agent worked or waited. Press Enter to go, or the Space bar to stay.
+- Go back to where you were: press `cmd-[` (BACK1). Press it again to switch between your last two places.
+- Concentrate on one tab: press `cmd-shift-f` (FOCUS). The right column hides. When an agent needs you, a SIGNAL line still tells you.
+- Finish a project: press `cmd-alt-w` (SIGN-OFF). It shows a summary first, and only NEXT closes the space.
+- Change the colors: press `cmd-shift-g` (GLOW), or click PLATO in the banner.
 
 ## Keys
 
 | Key | Name | What it does |
 | --- | --- | --- |
 | `cmd-enter` | NEXT | Go to the next tab. On SIGN-ON or SIGN-OFF, confirm. |
-| `cmd-alt-enter` | BACK | Go to the tab before this one on the line. On SIGN-ON or SIGN-OFF, cancel. |
-| `cmd-shift-alt-enter` | BACK1 | Return to where you were before. |
-| `cmd-shift-enter` | NEXT1 | Go to the agent that waits longest for you. |
-| `cmd-i` | MAP | Open the map, or close it. |
-| `cmd-j` | JUMP | Type a tab code to go there, without the map. |
-| `cmd-shift-i` | ALL | Show every space's tabs on the route, or only this one's. |
+| `cmd-shift-enter` | BACK | Go to the tab before this one on the line. On SIGN-ON or SIGN-OFF, cancel. |
+| `cmd-]` | NEXT1 | Go to the agent that waits longest for you. |
+| `cmd-[` | BACK1 | Return to where you were before. |
+| `cmd-shift-a` | AGENDA | Open the agenda of your day or week, or close it. |
+| `cmd-j` | JUMP | Find a tab by its code, name, purpose or folder, and go there. |
+| `cmd-shift-t` | TREE | Show every space's tabs on the route, or only this one's. |
 | `cmd-n` | SIGN-ON | Open a new space. |
-| `cmd-alt-w` | SIGN-OFF | Close this space (in the map: the space under the cursor). |
+| `cmd-alt-w` | SIGN-OFF | Close this space. |
 | `cmd-u` | CLOSE UP | Remove the free letters and move the later spaces up, after a summary. |
-| `cmd-l` | LAB | Add a tab (a terminal or agent) to this space (in the map: to the space under the cursor). |
+| `cmd-l` | LAB | Add a tab (a terminal or agent) to this space. |
+| `cmd-e` | PURPOSE | Set your purpose for this tab. |
+| `cmd-shift-e` | DUE | Set or clear this space's due date. |
 | `cmd-shift-f` | FOCUS | Hide the right column and narrow the route, or bring them back. |
 | `cmd-/` | HELP | Show the PLATO keys. |
+| `cmd-k` | KEYS | Then one plain letter runs any PLATO command (see [the ⌘K panel](#the-k-panel-keys)). |
 | `cmd-shift-p` | TERM | Open the command palette. |
 | `cmd-shift-g` | GLOW | Step the glow. |
 | `cmd-w` | CLOSE | Close an open PLATO dialog, else the tab. |
-| `cmd-shift-z` | ZOOM | Zoom the pane (Herdr's `cmd-shift-enter` is NEXT1 in this layout). |
+| `cmd-shift-z` | ZOOM | Zoom the pane (Herdr's `cmd-shift-enter` is BACK in this layout). |
+
+In the agenda, SIGN-OFF, LAB, PURPOSE and DUE act on the space or tab under the cursor.
 
 The keys are in the `layout:plato` section of `keys.json`, so they apply only in this layout.
 
-## Install
+While LOOK, JUMP, HELP or a right-click menu is open, NEXT, BACK, NEXT1 and BACK1 wait, so a key never moves you behind a dialog. In SIGN-ON, SIGN-OFF, SET PURPOSE and SET DUE, NEXT confirms and BACK cancels.
 
-The install script copies the layout, the six themes and eight mods into Herdr's folder. The mods are `plato` and the seven `plato-*` mods. Herdr's folder is `~/.config/herdr-app`, or `$HERDR_APP_HOME`. It also adds a `layout:plato` section to your `keys.json` and keeps a copy of the old file as `keys.json.before-plato`.
+If you come from Herdr: in PLATO, `cmd-]` and `cmd-[` are NEXT1 and BACK1. They work like Herdr's next and previous agent. But NEXT1 goes only to an agent that needs you, and BACK1 goes back to where you were. Herdr's pane zoom is `cmd-shift-z` in this layout.
+
+## The glows
+
+GLOW (`cmd-shift-g`) steps through eight glows, the four modern ones first.
+
+| Tokyo Night (the default) | Kanagawa |
+| --- | --- |
+| ![PLATO in Tokyo Night: blue lines and text on Tokyo Night's navy, with orange for what needs you](previews/main-tokyo.png) | ![PLATO in Kanagawa: warm off-white lines and text on Kanagawa's ink, with orange for what needs you](previews/main-kanagawa.png) |
+| Catppuccin Mocha | Nord |
+| ![PLATO in Catppuccin Mocha: mauve lines and text on Mocha's dark base, with peach for what needs you](previews/main-mocha.png) | ![PLATO in Nord: frost blue lines and text on Nord's dark gray, with Nord's yellow for what needs you](previews/main-nord.png) |
+
+### Classic glows
+
+The four classic glows recreate the terminals of the 1970s and 80s. Orange is the color of the PLATO terminal itself.
+
+| PLATO orange | Amber |
+| --- | --- |
+| ![PLATO in orange](previews/main-orange.png) | ![PLATO in amber](previews/main-amber.png) |
+| Green | Paper white |
+| ![PLATO in green](previews/main-green.png) | ![PLATO in paper white](previews/main-white.png) |
+
+## Claude Code hooks
+
+Three optional hooks let Claude Code tell PLATO what it is doing:
+
+- Your last prompt: NOW AT shows the last prompt you sent to each tab.
+- The purpose: once your task is clear, Claude sets a short purpose for its tab. LOOK, the hover detail and NOW AT show it.
+- The step: the strip under Claude's pane shows its progress, such as `3/7`. While Claude needs you, the strip also shows what it waits to do, such as `Bash: git push`.
+
+To turn them on, install `jq` (`brew install jq`) and run:
 
 ```sh
-./install.sh
-herdr-app do layout.switch --name plato
+./install.sh --hooks
 ```
+
+The script adds the hooks to `~/.claude/settings.json` and keeps a copy of the old file as `settings.json.before-plato`. It also lets Claude run `hc label` without a question, and outside Claude Code's sandbox, where `hc` cannot reach Herdr. Claude Code sessions that start after the install use the hooks. To remove them, run `./install.sh --hooks --remove`.
+
+To set a purpose yourself, press `cmd-e` (PURPOSE). [For agents and scripts](#for-agents-and-scripts) tells how the purpose and the step work, and how another agent or a script can set them.
+
+## Install in more detail
+
+The install script copies the layout, the eight themes and the `plato` mod into Herdr's folder, `~/.config/herdr-app` (or `$HERDR_APP_HOME`). It also adds a `layout:plato` section to your `keys.json` and keeps a copy of the old file as `keys.json.before-plato`.
 
 If PLATO is already installed, the script stops. Run `./install.sh --force` to replace it.
 
-## Work on it
+To upgrade, get the new version (`git pull` in the repo folder) and run `./install.sh --force`. TODAY's history stays, because it is kept outside the mod's folder. An install of v2.0.0 or earlier left seven other mods. If they are there, `--force` removes them: `plato-route`, `plato-strip`, `plato-sign`, `plato-nowat`, `plato-timetable`, `plato-banner` and `plato-signals`. The `plato` mod does their work.
 
-Herdr reloads a changed mod file at once, but it does not follow a symlink for this. So you edit the live files in `~/.config/herdr-app`, and you copy them into this repo before a commit:
+PLATO keeps a record of each day in `~/.config/herdr-app/plato-data/YYYY-MM-DD.json`. It writes only after a change, and it deletes files older than 60 days.
+
+## Uninstall
+
+1. Switch Herdr to another layout, for example `herdr-app do layout.switch --name main` (see [Stop using PLATO](#stop-using-plato)).
+2. If you turned on the Claude Code hooks, remove them with `./install.sh --hooks --remove`.
+3. Remove PLATO's files from Herdr's folder:
+
+   ```sh
+   H="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
+   rm -r "$H/mods/plato" "$H/layouts/plato.json" "$H/layouts/plato.svg" "$H"/themes/plato*.json
+   ```
+
+4. In the same terminal, remove PLATO's keys from `keys.json`. This keeps any other keys that you changed after the install:
+
+   ```sh
+   python3 -c 'import json,sys; p=sys.argv[1]; k=json.load(open(p)); k.pop("layout:plato",None); json.dump(k,open(p,"w"),indent=2)' "$H/keys.json"
+   ```
+
+5. To also delete TODAY's history, remove `$H/plato-data`.
+
+To get your earlier `keys.json` back instead, use the copy that the install kept, `keys.json.before-plato`.
+
+## Each panel in detail
+
+### The route
+
+The route is the line of spaces on the left. Each space is a square with its letter inside. Under the current space you see its tabs, each with a round lamp, its program and its state. A ring around a lamp marks the tab you are at. Under the other spaces you see one dot per tab:
+
+- A filled dot is an agent that works or waits for you. A hollow dot is idle.
+- A dot that waits for you pulses, and its space has a WAITING tag in reverse video.
+
+A click on a space, a dot or a tab goes there. A click on a WAITING tag goes to the agent that waits in that space. Put the pointer on a dot, a tab's lamp or row, or a one-line row in TREE, and the readout at the bottom shows that tab. It shows the code and names, the purpose with its source, and the state with its time. When the pointer leaves, the readout comes back.
+
+A right-click on a space's square or name opens its menu: RENAME (`shift-F2`), LAB (`cmd-l`), SET DUE (`cmd-shift-e`) and SIGN-OFF (`cmd-alt-w`). A free letter offers SIGN-ON there instead. CLOSE UP (`cmd-u`) shows while the line has free letters. A right-click on a tab or a dot opens the tab's menu: GO (Enter), LOOK, RENAME TAB (`F2`) and SET PURPOSE (`cmd-e`). Each item does what its key does, and SIGN-OFF still shows its summary first. A small ▼ on the line points the way NEXT goes. NEXT1's way is drawn as a dashed line from your tab to its target, with the word NEXT1 on the target's row. The readout at the bottom names the targets of NEXT, BACK, NEXT1 and BACK1.
+
+TREE (`cmd-shift-t`) shows every space's tabs instead of dots, one line each, with the code, the program and the state. Press it again to go back. The route's title shows TREE in reverse video while it is on. A click on "TREE ⌘⇧T" or "AGENDA ⌘⇧A" in the title does the same as the key.
+
+### Moving
+
+- NEXT goes to the next tab on the line. After the last tab it wraps to space a.
+- BACK goes to the tab before, and before the first tab it wraps to the last.
+- NEXT1 goes to the agent that waited longest. Blocked agents come first, then agents that are done but not seen.
+- BACK1 returns to where you were before, however you got there.
+
+After every move, the banner says "ARRIVED AT f1 meridian · docs from e2". The strip turns to reverse video and says "arrived from e2". Both go away after 4 seconds, or as soon as you send a prompt there.
+
+### The strip and the banner
+
+The strip is a line under every pane. It describes its own pane, wherever your keys are, so each pane of a split tab has its own. From left to right it shows:
+
+- The tab code, such as `d2`, or `c1.2` in a split tab.
+- The git state of the pane's folder: the branch, then `●3` changed files, `↑2` commits to push and `↓1` to pull. A count of zero does not show. A folder outside git shows no git part.
+- The agent's progress, such as `3/7`. While the agent needs you, the strip also shows the step it waits to run, such as `▸ asks: Bash: git push`. While the agent works, the step does not show, so the strip stays still.
+- The state with its time, such as `working 12m`.
+
+![The strip of a waiting agent: g1, the branch main with one changed file, "▸ asks: Bash: python -m meridian.serve --port 8040" and the progress 4/6. At the right, "needs you 4m".](previews/strip.png)
+
+The banner and NOW AT show the space, the tab and the purpose, so the strip leaves them out. When the pane is narrow, the step is cut first, then the branch. PLATO reads the git state every 10 seconds, and at once after you change folder or branch.
+
+The banner says "PLATO · space e compass · tab 1 api" on the left. On the right it shows how many other agents need you, the date and the clock. A click on "2 need you" does what NEXT1 does. After PLATO it names the current glow in dim text, for example "PLATO amber". The name is bright for two seconds after a change. A click on PLATO steps the glow, and its tooltip names the key, `cmd-shift-g`.
+
+### SIGN-ON, SIGN-OFF and CLOSE UP
+
+SIGN-ON (`cmd-n`) opens a new space. Type a name, then press NEXT. SIGN-ON shows the letter the space takes, which is the first free letter. → puts the space at the end of the line instead. The folder is optional. Type it as `~/…`, `/…` or a path in your home folder. Or click "choose…" or press `cmd-o`, and pick it in the system folder picker. PLATO does not look for a folder on its own. With no folder, the space starts in your home folder. The due date is also optional (`fri`, `27`, `11/27`, `+5`). Tab, ↓ and ↑ move between the fields.
+
+SET DUE (`cmd-shift-e`) sets or changes the due date of the space you are in. In the agenda, it acts on the space under the cursor. A right-click on a space offers it too. Type the date in the same forms as in SIGN-ON, and the line under it shows the day it means. Enter saves, and a blank line clears the date. Esc cancels.
+
+SIGN-OFF (`cmd-alt-w`) closes the current space. It shows a summary first: the time open, the tabs, the due date, and what happens to the line. Only NEXT closes the space. NEXT1 also closes it and goes to the agent that waits for you. BACK keeps it open. A space in the middle leaves a free letter, so the other spaces keep theirs. On SIGN-OFF, `U` closes up the line instead and gives the later spaces new letters.
+
+CLOSE UP (`cmd-u`) closes up the line at any time. It lists the free letters and the moves first, and only NEXT closes up the line. Free letters at the end of the line are removed.
+
+On SIGN-ON, SIGN-OFF and CLOSE UP, the keys at the bottom are boxed. A click on a box does what the key does. So you can also answer a page by mouse, for example one you opened from a menu.
+
+### The right column
+
+SIGNALS lists the agents that need you, in NEXT1 order, with how long each waited. The first row, in reverse video, is where NEXT1 goes. A click on a row goes to that agent. A right-click opens the tab's menu. Its LOOK shows the agent's details, and the arrow keys then step through the waiting agents in NEXT1 order.
+
+NOW AT shows where your keys go now: the tab code, space, tab and state. Below that it shows the last prompt you sent there. If the tab has a purpose, NOW AT shows it in full between the two. After a jump it says "changed".
+
+TODAY shows who waited on you today, and for how long:
+
+- The graph shows the last two hours that the app was open, with one row per space letter. A click on "last 2h" steps it to 6, 12 or 24 hours. A long window also shows part of yesterday.
+- A bar shows where an agent ran, a thin line shows idle time, and a hollow box shows where an agent waited for you. A bright line shows the path you took between spaces. A short gap with a dim line shows time with no record, because Herdr was closed or another layout was shown. The key calls it "not recorded".
+- At the right end of each row are today's totals: how long the space ran, and how long it waited for you.
+- The response line says how many waits you answered today, with the typical wait and the longest. An example is "6 waits answered · typical 3m · longest 21m at d2".
+- If a space has a due date, the due list shows it.
+
+A click on a row's letter or totals goes to that space, and a click on a wait box goes to the tab that waited. PLATO records the day while the PLATO layout is shown, in every view: with the agenda open and in FOCUS too. TODAY, the agenda, LOOK and JUMP read the record.
+
+FILES shows the folder tree of the project you are in, which is the git root of the focused terminal's folder. A click on a folder opens it. A click on a file shows it in a viewer pane.
+
+### The agenda
+
+The agenda (`cmd-shift-a`) shows your spaces over time, over the route and the terminal. It has two views, TODAY and WEEK. Tab switches between them, and so does a click on TODAY or WEEK in its header.
+
+TODAY gives each space a column. Its head is a large letter in a circle with the space name. Under the name are the due date, the time its agents ran today with your time there, and its last activity. The due date shows only when the space has one. A space with less than a minute of activity today shows only a QUIET tag. The space you are in has a filled circle and its name in reverse video. Under the head, a box shows today's hours from top to bottom, from the hour of the first session to now:
+
+- A filled block marks the time an agent there ran.
+- A hollow block with the word WAIT marks the time an agent waited on you.
+- A thin bright bar at the left edge is your time in that space.
+- A dim band marks time with no record: Herdr was closed, another layout was shown, or there is no day file yet. This time is the same for every space, so only the first column says "not recorded".
+- A dashed line at the bottom is now.
+
+The space's tabs hang under the box, each with its lamp, code and name. The tab you are at is in reverse video, `→` marks where NEXT goes, and `▲` marks where NEXT1 goes. A free letter keeps a dashed column, so no other column moves. When not all spaces fit, the header shows `◀ 2 more` or `1 more ▶`. Under the columns, one line gives the day's totals.
+
+WEEK gives each space a row, with a cell for each of the four days before today, today, and the four days after. A past cell has a bar for the time the agents ran and a thin bar for your time, with the time in words. A full bar is four hours. A dot is a day with no activity. The future cells are dashed, and "◆ DUE" marks the due date. At the right end are the week's times and the last day with activity. A space with no activity today or yesterday has a QUIET tag. Under the rows, one line gives the week's totals and its busiest day.
+
+![WEEK: one row per space. Each day has a bar for the time the agents ran and your time under it. The future days are dashed, with a DUE mark. The week's times are at the right.](previews/agenda-week.png)
+
+While the agenda is open, the right column shows the due dates, soonest first. Press `cmd-shift-e` to set the due date of the space under the cursor. Under them are the agent that ran longest and the agent that was idle longest.
+
+"Your time" is the time a tab of that space had the focus while Herdr was open. The agenda counts a letter's time only since its space took the letter. A renamed space keeps its history, and a letter that changed space does not mix two projects.
+
+Keys in the agenda:
+
+- Tab switches TODAY and WEEK.
+- The arrows move the ▶ cursor, and Enter goes to the tab under it. In WEEK, up and down move between spaces.
+- The Space bar opens LOOK for the tab under the cursor (see below). In WEEK, that is the space's first tab.
+- `cmd-j` opens JUMP over the agenda, to find a tab by its code, name, purpose or folder.
+- A click on a tab goes there. A right-click on a column head, a tab or a WEEK row opens its menu. In WEEK, a click moves the cursor to a row, and a double click goes there. While the pointer is on a tab, the line under the columns shows its details.
+- LAB, SIGN-OFF and SET DUE act on the space under the cursor. Move to a free letter and press Enter to sign on there.
+- Esc or `cmd-shift-a` closes the agenda. Any move closes it first.
+
+Under the view, one line shows the keys for where the cursor is: move, go, look and sign-off. The keyset at the bottom of the window shows the other keys, and the tab rows mark where NEXT and NEXT1 go.
+
+### LOOK
+
+LOOK shows a tab's details before you go there. Press the Space bar in the agenda, or right-click a tab on the route, an agenda card or a SIGNALS row and choose LOOK. The card shows the code, space and tab, the program, the state with its time, and whether NEXT or NEXT1 goes there. Under that are the purpose in full with where it came from, the first prompt when it is different, the last prompt you sent and when, the folder, the space's tabs and due date, today's run time, and running sub-agents.
+
+In LOOK, Enter goes to the tab. The arrow keys show the next card: along the line, or from SIGNALS through the waiting agents in NEXT1 order. The Space bar or Esc closes LOOK. `cmd-e` closes it and sets that tab's purpose.
+
+### JUMP, FOCUS, HELP and the keyset
+
+JUMP (`cmd-j`) finds a tab and goes there. It opens a dialog that lists every tab. The agents that need you come first, in NEXT1 order, then the working agents, then the idle tabs in line order. Type part of a tab's name, space, purpose or folder to narrow the list. Each word must match, in any order, and the matched letters light up. A code such as `c3`, or a space's letter, puts that tab first, so a code and Enter go there at once. Beside the list is the selected tab's LOOK card. The arrows, or `ctrl-n` and `ctrl-p`, move. Tab shows one group at a time. Enter or a double click goes to the tab. Esc, `ctrl-g` or `cmd-j` again closes JUMP. In the agenda, JUMP opens over the agenda, and closing it puts you back in the agenda.
+
+![JUMP with "rate" typed: two of 19 tabs match, f2 that needs you and f1 that is working, each with "rate" lit in its purpose. The chips count the matches in each group. Beside the list is the LOOK card of f2, the selected row.](previews/jump.png)
+
+FOCUS (`cmd-shift-f`) hides the right column and narrows the route to a column of lettered squares. The current space is filled. A space with an agent that waits for you pulses and has a WAIT tag. If an agent in another tab needs you, a flashing SIGNAL line shows above the keys. A click on the line does what NEXT1 does, and a click on a WAIT tag goes to the agent in that space. Press FOCUS again to bring the columns back. NEXT, BACK, NEXT1 and the agenda keep working.
+
+HELP (`cmd-/`) has two screens. KEYS lists every PLATO key and one line about the mouse, Herdr's own picker (`cmd-p`) and its command palette (TERM, `cmd-shift-p`). It also lists the rename keys: `shift-F2` for a space, which keeps its letter, and `F2` for a tab. WORDS explains the letter, the code, the free letter, WAITING, the route's marks, SIGNAL, the agenda, JUMP and the purpose. → or Enter shows the next screen, ← the one before, and 1 or 2 goes straight there.
+
+The keyset along the bottom shows NEXT, BACK, NEXT1, BACK1, JUMP, AGENDA, FOCUS, LAB, TERM and HELP as boxed keys, each with its shortcut: the moves, then the views, then the rest. The route's title also shows the TREE and AGENDA keys.
+
+### The ⌘K panel (KEYS)
+
+KEYS gives every PLATO command a short, plain letter after `cmd-k`. Press `cmd-k`, release it, then press one letter. For example, `cmd-k d` sets the due date, and `cmd-k j` opens JUMP. If you press the letter within half a second, nothing shows. If you pause, a panel at the bottom of the window lists the letters in four groups: MOVE, VIEW, SPACE AND TAB, and MORE. Each row shows the letter, the command and its direct key. A click on a row runs it.
+
+The letters are easy to remember: `n` NEXT, `p` BACK, `a` AGENDA, `d` DUE, `k` SIGN-OFF, `x` TERM and `h` HELP. A capital letter is the "1" move: `N` is NEXT1 and `P` is BACK1. HELP also takes `?`. `z` is ZOOM and `r` is RENAME TAB. The panel takes plain letters only. A key typed with `cmd` held is never a panel key. `ctrl-g` or Esc closes the panel, and nothing runs. A letter with no command also closes it, and the banner says "⌘K q is undefined" for two seconds.
+
+![The KEYS panel at the bottom of the window, after a pause: four groups of letters, MOVE, VIEW, SPACE AND TAB and MORE. Each row shows the letter, the command and its direct key. The header says that ctrl-g or Esc cancels.](previews/keys.png)
+
+In the agenda, `e`, `d`, `l`, `k` and `r` act on the space or tab under the cursor, as their direct keys do there. The panel's header names the cursor, and those rows show their target.
+
+## For agents and scripts
+
+PLATO reads a few labels on each terminal. The Claude Code hooks set them for Claude, and any other agent, wrapper or script can set them with `hc label`.
+
+### The purpose
+
+A tab can have three kinds of purpose, and the first one that is set wins:
+
+1. Yours: press `cmd-e` (PURPOSE), or right-click a tab and pick SET PURPOSE, then type it and press Enter. Leave it blank to remove it. In a script, use `hc label <terminal> "plato.purpose_yours=Ship the v2 API"`, and `hc label <terminal> plato.purpose_yours=` to remove it.
+2. The agent's: when the goal changes, the agent sets a new purpose, and the card says `· agent, revised`.
+3. The session's first prompt, until one of the others is set.
+
+LOOK, the hover detail and NOW AT show where a purpose came from in dim text: `· yours`, `· agent`, `· agent, revised` or `· first prompt`. When you arrive at a tab, its strip reads `GOAL <purpose>`.
+
+### The last prompt
+
+NOW AT shows `plato.last`, the last prompt you sent to a tab, and `plato.last_at`, when you sent it, in unix seconds. To try NOW AT without the hooks, set them by hand:
 
 ```sh
-./sync.sh
-git status
+hc label <terminal> "plato.last=fix the login bug" "plato.last_at=$(date +%s)"
 ```
 
-Run the logic tests with Node, in each mod that has them (`plato`, `plato-route`, `plato-sign`, `plato-timetable` and `plato-banner`):
+### Step labels
+
+The strip shows an agent's step from three labels on its terminal. PLATO does not know which agent writes them:
+
+| Label | What it holds | Example |
+| --- | --- | --- |
+| `plato.step` | What the agent does now, in its own words. The strip shows it while the agent needs you, on one line, cut at 60 characters. | `Bash: git push` |
+| `plato.step_at` | When the step started, in unix seconds. | `1795474442` |
+| `plato.tasks` | The agent's progress, as short text. An empty value clears it. | `3/7` |
+
+Set `plato.step_at` with each step. A step older than `plato.last_at`, the time of your last prompt, does not show, because it belongs to an earlier turn. For example:
 
 ```sh
-cd mods/plato-route && node --test test/*.test.mjs
+hc label <terminal> "plato.step=reading the diff" "plato.step_at=$(date +%s)"
 ```
 
-Check a mod with Herdr:
+### What `--hooks` adds to the settings
 
-```sh
-herdr-app check ~/.config/herdr-app/mods/plato-route
-```
+`./install.sh --hooks` adds the permission rule `Bash(hc label:*)`, so Claude sets its purpose without a question. It also adds the sandbox exclusion `hc label:*`, which runs `hc label` outside the sandbox. The exclusion applies only when `hc label` runs alone, with no pipe or redirect. A second run of the script adds nothing.
 
-A mod cannot import from another mod's folder. So some mods keep copies of `line.js`, `look.js`, `map.js` and `day.js`, and the tests check that the copies match. Change all copies together.
+## Work on PLATO
 
-Scripts can drive PLATO with mod commands. Examples are `herdr-app do plato-route.next`, `herdr-app do plato-route.map` and `herdr-app do 'plato-route.type:c3'`. The last one types c3 into an open map.
-
-## Last prompt sent (Claude Code hook)
-
-NOW AT, the strip and the map cards show the last prompt you sent to the agent in a tab. A new prompt also clears the arrival line in the banner. Each agent writes this itself, as two labels on its Herdr terminal: `plato.last` (the prompt on one line, at most 120 characters) and `plato.last_at` (unix seconds). For Claude Code, `hooks/claude-plato-last.sh` does it. It needs `jq` and `hc`, and outside Herdr it does nothing.
-
-To turn it on, add this to `~/.claude/settings.json` (merge it into an existing `hooks` object), with the full path to your copy of the repo:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      { "hooks": [ { "type": "command", "command": "/path/to/herdr-plato/hooks/claude-plato-last.sh" } ] }
-    ]
-  }
-}
-```
-
-Claude Code sessions started after that tag their terminals. To try NOW AT without the hook, set the labels by hand: `hc label <terminal> "plato.last=fix the login bug" "plato.last_at=$(date +%s)"`.
+To change the code, read [DEVELOPING.md](DEVELOPING.md). `RECIPE.md` is the brief from which an agent can build PLATO from scratch.
 
 ## License
 
@@ -138,3 +375,5 @@ The code is under the MIT License (`LICENSE`). The bundled IBM Plex Mono fonts k
 - Brian Dear, "The Friendly Orange Glow: The Untold Story of the PLATO System and the Dawn of Cyberculture" (Pantheon, 2017).
 - [Nord](https://www.nordtheme.com) by Arctic Ice Studio and Sven Greb, under the MIT License: the colors of the nord glow.
 - [Catppuccin](https://catppuccin.com), under the MIT License: the colors of the mocha glow, from its Mocha flavor.
+- [Tokyo Night](https://github.com/folke/tokyonight.nvim) by Folke Lemaitre, under the Apache License 2.0: the colors of the tokyo glow, from its Night style.
+- [Kanagawa](https://github.com/rebelot/kanagawa.nvim) by Tommaso Laurenzi, under the MIT License: the colors of the kanagawa glow, from its Wave theme.

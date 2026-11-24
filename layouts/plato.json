@@ -1,7 +1,7 @@
 {
   "id": "root",
   "type": "column",
-  "theme": "plato",
+  "theme": "plato-tokyo",
   "ui_font": "IBM Plex Mono",
   "titlebar": "none",
   "traffic_lights": [12, 9],
@@ -9,31 +9,31 @@
   "background": "#0d0703",
   "children": [
     { "id": "banner", "type": "block", "size": { "px": 28 }, "window_drag": true,
-      "content": { "mod": "plato-banner" } },
+      "content": { "mod": "plato", "props": { "role": "banner" } } },
     { "id": "main-row", "type": "row",
       "children": [
         { "id": "plato-main", "type": "stack", "active": "line-view", "children": [
         { "id": "line-view", "type": "row", "children": [
         { "id": "route", "type": "block", "size": { "px": 260 }, "min": 48,
-          "content": { "mod": "plato-route", "props": { "mode": "line" } } },
+          "content": { "mod": "plato", "props": { "role": "route", "mode": "line" } } },
         { "id": "work", "type": "block", "padding": [2, 2],
           "content": { "tab": "active",
             "pane": { "gap": 6, "radius": 2, "background": "background",
                       "border": { "width": 1, "color": "border" },
                       "focus": { "width": 1, "color": "accent" }, "lone": true,
-                      "header": { "content": { "mod": "plato-strip" }, "height": 28,
+                      "header": { "content": { "mod": "plato", "props": { "role": "strip" } }, "height": 28,
                                   "position": "bottom", "reveal": "always" } } }} ] },
-        { "id": "map-view", "type": "block",
-          "content": { "mod": "plato-route", "props": { "mode": "map" } } } ] },
+        { "id": "agenda-view", "type": "block",
+          "content": { "mod": "plato", "props": { "role": "route", "mode": "agenda" } } } ] },
         { "id": "right", "type": "column", "size": { "px": 280 }, "min": 200,
           "children": [
-            { "id": "signals", "type": "block", "size": { "px": 150 }, "content": { "mod": "plato-signals", "props": { "mode": "signals" } } },
-            { "id": "nowat", "type": "block", "size": { "px": 92 }, "content": { "mod": "plato-nowat" } },
+            { "id": "signals", "type": "block", "size": { "px": 150 }, "content": { "mod": "plato", "props": { "role": "signals", "mode": "signals" } } },
+            { "id": "nowat", "type": "block", "size": { "px": 144 }, "content": { "mod": "plato", "props": { "role": "nowat" } } },
             { "id": "box", "type": "stack", "active": "box-line", "children": [
               { "id": "box-line", "type": "column", "children": [
-                { "id": "timetable", "type": "block", "size": { "px": 272 }, "content": { "mod": "plato-timetable" } },
+                { "id": "timetable", "type": "block", "size": { "px": 272 }, "content": { "mod": "plato", "props": { "role": "timetable" } } },
                 { "id": "files", "type": "block", "content": { "mod": "plato", "props": { "role": "files" } } } ] },
-              { "id": "box-map", "type": "block", "content": { "mod": "plato-signals", "props": { "mode": "totals" } } } ] } ] } ] },
+              { "id": "box-agenda", "type": "block", "content": { "mod": "plato", "props": { "role": "signals", "mode": "due" } } } ] } ] } ] },
     { "id": "keyset", "type": "block", "size": { "px": 32 },
       "content": { "mod": "plato", "props": { "role": "keyset" } } }
   ]

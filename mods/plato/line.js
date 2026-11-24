@@ -1,8 +1,6 @@
 // PLATO, as pure functions: letters as slots, stops and stop codes,
 // the NEXT / NEXT1 / BACK order, and the route's rows. No "herdr" import, so Node can
-// test it (test/line.test.mjs). plato-strip, plato-sign, plato-nowat and plato-banner keep
-// identical copies (a test checks them), because a mod
-// cannot import from another mod's folder.
+// test it (test/line.test.mjs).
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
@@ -10,7 +8,7 @@ const LETTERS = "abcdefghijklmnopqrstuvwxyz";
  *  markY are the centers of a dot and a stop marker, down from the top of their row:
  *  the NEXT1 run ends there. dotUnder is the line under a dot row that the run comes in on.
  *  slotBox is the side of a space's square, which holds its letter. compact is the
- *  height of a one-line stop row (ALL: other spaces' stops), compactMarkY its
+ *  height of a one-line stop row (TREE: other spaces' stops), compactMarkY its
  *  lamp's center, compactUnder the line under it that the NEXT1 run comes in on;
  *  stopUnder is that line for a full two-line stop row. */
 export const ROW = { slot: 34, dots: 22, stop: 50, hint: 20, dotX: 40, dotStep: 16, stopX: 40, dotY: 5, dotUnder: 16, markY: 18, stopUnder: 45, slotBox: 18, compact: 28, compactMarkY: 12, compactUnder: 25 };
@@ -202,6 +200,12 @@ export function waitingLetters(agents, all, currentTerminal) {
   return out;
 }
 
+/** The agent a click on a space's WAITING tag goes to: the first in NEXT1 order in that
+ *  space (not counting where you are), or null. */
+export function waitingIn(agents, all, letter, currentTerminal) {
+  return waitingFor(agents, currentTerminal).find((a) => all.find((x) => x.pane === a.pane)?.letter === letter) ?? null;
+}
+
 /** The NEXT1 readout: the code and the reason first, so a narrow route cuts only the names. */
 export function next1Words(stop, agent) {
   if (!stop || !agent) return "nothing waiting";
@@ -226,7 +230,7 @@ export function next1Arrow(run, runX) {
 }
 
 /** A stop row's lamp: its center (y) and its top edge. A full row has a 10 px lamp,
- *  a compact (ALL) row an 8 px one. */
+ *  a compact (TREE) row an 8 px one. */
 export function markY(r) {
   return r.y + (r.compact ? ROW.compactMarkY : ROW.markY);
 }
@@ -279,7 +283,7 @@ export function backStop(list, all, current) {
 
 /** The route, top to bottom: each space; under the current one its stops, under the
  *  others a row of dots; under a free slot a hint. Each row has y and h in px. */
-export function routeRows(line, spaces, list, currentSpace, all = false) {
+export function routeRows(line, spaces, list, currentSpace, tree = false) {
   const byId = new Map(spaces.map((s) => [s.id, s]));
   const rows = [];
   let y = 0;
@@ -291,8 +295,8 @@ export function routeRows(line, spaces, list, currentSpace, all = false) {
     if (!space) continue;
     const mine = list.filter((s) => s.space === space.id);
     if (space.id === currentSpace) for (const stop of mine) add({ type: "stop", h: ROW.stop, slot, stop });
-    // ALL: the other spaces' stops as one-line rows instead of a row of dots.
-    else if (all) for (const stop of mine) add({ type: "stop", h: ROW.compact, slot, stop, compact: true });
+    // TREE: the other spaces' stops as one-line rows instead of a row of dots.
+    else if (tree) for (const stop of mine) add({ type: "stop", h: ROW.compact, slot, stop, compact: true });
     else if (mine.length) add({ type: "dots", h: ROW.dots, slot, stops: mine });
   }
   return rows;
@@ -366,7 +370,9 @@ export function signOnLetters(line) {
 export function closeUp(line, now) {
   const slots = (line?.slots ?? []).filter((s) => s.space).map((s, i) => {
     const n = { ...s, letter: LETTERS[i] };
-    if (n.letter !== s.letter) Object.assign(n, { moved_from: s.letter, moved_at: now });
+    // letter_at stays (moved_* go after a day): the agenda counts a letter's time for this
+    // space only from here, so the space that had the letter before is not mixed in.
+    if (n.letter !== s.letter) Object.assign(n, { moved_from: s.letter, moved_at: now, letter_at: now });
     return n;
   });
   return { version: 1, slots };
@@ -401,6 +407,72 @@ export function lastSent(terms, address) {
   return { text: text ?? "", at: sec == null ? null : sec * 1000 };
 }
 
+/** What a tab is for, from its terminal's labels: { text, source, revised }, or null.
+ *  The first that is set wins: plato.purpose_yours (source "yours", set by you),
+ *  plato.purpose ("agent", set by the agent), plato.first (the session's first prompt).
+ *  revised is true when the agent's purpose shows and plato.purpose_was holds an earlier one.
+ *  A blank value counts as not set. */
+export function purposeOf(labels) {
+  const get = (k) => String(labels?.[k] ?? "").trim();
+  const yours = get("plato.purpose_yours");
+  if (yours) return { text: yours, source: "yours", revised: false };
+  const agent = get("plato.purpose");
+  if (agent) return { text: agent, source: "agent", revised: Boolean(get("plato.purpose_was")) };
+  const first = get("plato.first");
+  return first ? { text: first, source: "first", revised: false } : null;
+}
+
+const SOURCE_WORDS = { yours: "yours", agent: "agent", first: "first prompt" };
+
+/** Where a purpose came from, as LOOK, NOW AT and the hover detail show it in dim
+ *  text: "· yours", "· agent", "· agent, revised" or "· first prompt". */
+export function purposeSource(purpose) {
+  return `· ${SOURCE_WORDS[purpose.source]}${purpose.revised ? ", revised" : ""}`;
+}
+
+/** A purpose as lines of at most perLine characters, wrapped by word, at most maxLines,
+ *  for LOOK and NOW AT. The last line keeps room for " " and the source (suffix),
+ *  which they draw after it in dim text. If the last line has no room for it and a line is spare, an empty
+ *  line is added for the source. Text that does not fit ends in "…" after a whole word. A source too long for
+ *  any line gets no room (it is cut when drawn). Blank text gives no lines. */
+export function purposeLines(text, suffix, perLine, maxLines = 3) {
+  const words = String(text ?? "").split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const need = suffix.length + 1 < perLine ? suffix.length + 1 : 0;
+  const lines = [];
+  let cur = "";
+  for (let w of words) {
+    while (w.length > perLine) {
+      if (cur) { lines.push(cur); cur = ""; }
+      lines.push(w.slice(0, perLine));
+      w = w.slice(perLine);
+    }
+    if (!w) continue;
+    if (!cur) cur = w;
+    else if (cur.length + 1 + w.length <= perLine) cur += ` ${w}`;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  const fits = (l) => l.length + need <= perLine;
+  if (lines.length <= maxLines && fits(lines[lines.length - 1])) return lines;
+  if (lines.length < maxLines) return [...lines, ""];
+  // Cut: the last line shown loses words from its end until it holds "…" and the source.
+  const out = lines.slice(0, maxLines);
+  const room = perLine - need - 1;
+  let last = out[maxLines - 1].split(" ");
+  while (last.length > 1 && last.join(" ").length > room) last.pop();
+  const l = last.join(" ");
+  if (l.length <= room) out[maxLines - 1] = `${l}…`;
+  else if (maxLines > 1) {
+    // Not even one word fits beside the source: the line before ends in "…" instead, and
+    // the last line holds only the source. A word is never cut into a fragment.
+    const prev = out[maxLines - 2];
+    out[maxLines - 2] = `${prev.length < perLine ? prev : prev.slice(0, perLine - 1)}…`;
+    out[maxLines - 1] = "";
+  } else out[0] = `${l.slice(0, Math.max(room, 0))}…`;
+  return out;
+}
+
 /** The arrival record when the current stop changed from prev to cur, or null.
  *  lastAt is the raw plato.last_at label of cur's terminal now: a new prompt changes it. */
 export function arrivalFor(prev, cur, now, lastAt) {
@@ -428,4 +500,12 @@ export function arrivalLive(arrival, lastAt, now) {
 /** Whether the stop with this key shows the arrival (the banner, the yellow strip). */
 export function arrivalShown(arrival, key, lastAt, now) {
   return Boolean(arrival && key && arrival.to?.key === key && arrivalLive(arrival, lastAt, now));
+}
+
+/** The line with a space's due date set (due null clears it). A free or missing letter, or the
+ *  date it already has, gives the same line back, so the route writes nothing. */
+export function setDue(line, letter, due) {
+  const i = (line?.slots ?? []).findIndex((s) => s.letter === letter && s.space);
+  if (i < 0 || (line.slots[i].due ?? null) === (due ?? null)) return line;
+  return { ...line, slots: line.slots.map((s, k) => (k === i ? { ...s, due: due ?? null } : s)) };
 }

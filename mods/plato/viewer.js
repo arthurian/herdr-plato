@@ -1,23 +1,14 @@
-// A markdown file in a pane. NOTES sets shared "plato.viewer.<space id>" to
+// A markdown file in a pane. openInViewer (keys.js) sets shared viewerKey(space) to
 // change the file; props.file is only the first one.
 
 import { div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { props, shared, setShared, spaces, panes, run, readTextFile } from "herdr";
-import { C, box } from "./kit.js";
+import { props, shared, panes, run, readTextFile } from "herdr";
+import { C, box } from "./look.js";
 import { viewerKind } from "./logic.js";
+import { viewerKey } from "./shared.js";
 
 const MAX = 200000;
-
-/** Show a file in this space's viewer pane, opening one beside the terminal if needed. */
-export function openInViewer(file) {
-  const space = spaces().find((s) => s.active);
-  const tab = space?.tabs.find((t) => t.active);
-  if (!space) return;
-  setShared(`plato.viewer.${space.id}`, file);
-  if (panes().some((p) => p.mod === "plato" && p.tab === tab?.id)) return;
-  run("pane.split", { direction: "right", mod: "plato", props: { role: "viewer", file, space: space.id } });
-}
 
 export default class Viewer {
   init(p) {
@@ -42,7 +33,7 @@ export default class Viewer {
 
   render(cx) {
     const pr = props() ?? this.p;
-    const file = shared(`plato.viewer.${pr.space}`) ?? pr.file;
+    const file = shared(viewerKey(pr.space)) ?? pr.file;
     if (file && file !== this.file) this.load(cx, file);
     const close = () => {
       const pane = pr.pane ?? panes().find((p) => p.mod === "plato" && p.focused)?.pane ?? panes().find((p) => p.mod === "plato")?.pane;

@@ -1,21 +1,24 @@
 {
   "layout:plato": {
-    "cmd-enter": "plato-route.next",
-    "cmd-alt-enter": "plato-route.back",
-    "cmd-shift-alt-enter": "plato-route.back1",
-    "cmd-shift-enter": "plato-route.next1",
+    "cmd-enter": "plato.next",
+    "cmd-shift-enter": "plato.back",
+    "cmd-[": "plato.back1",
+    "cmd-]": "plato.next1",
     "cmd-shift-z": "pane.zoom",
     "cmd-/": "plato.help",
     "cmd-shift-p": "app.palette",
     "cmd-l": "plato.lab",
-    "cmd-shift-g": "plato-banner.glow",
+    "cmd-shift-g": "plato.glow",
     "cmd-w": "plato.close",
-    "cmd-n": "plato-route.sign-on",
-    "cmd-alt-w": "plato-route.sign-off",
-    "cmd-u": "plato-route.close-up",
-    "cmd-i": "plato-route.map",
-    "cmd-j": "plato-route.jump",
-    "cmd-shift-i": "plato-route.all",
-    "cmd-shift-f": "plato.focus"
+    "cmd-n": "plato.sign-on",
+    "cmd-alt-w": "plato.sign-off",
+    "cmd-u": "plato.close-up",
+    "cmd-shift-a": "plato.agenda",
+    "cmd-j": "plato.jump",
+    "cmd-k": "plato.keys",
+    "cmd-shift-t": "plato.tree",
+    "cmd-shift-f": "plato.focus",
+    "cmd-e": "plato.purpose",
+    "cmd-shift-e": "plato.due"
   }
 }

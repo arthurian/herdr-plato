@@ -6,9 +6,10 @@
 import { div } from "gpui-kit";
 import { v_flex } from "gpui-base";
 import { spaces, shared, exec, watchFolder, home, focused, panes } from "herdr";
-import { C, box, inv } from "./kit.js";
-import { parseListing, treeRows, dirsToRefresh, projectFolder, notesCwd } from "./logic.js";
-import { openInViewer } from "./viewer.js";
+import { C, box, inv } from "./look.js";
+import { parseListing, folderRows, dirsToRefresh, projectFolder, notesCwd } from "./logic.js";
+import { openInViewer } from "./keys.js";
+import { viewerKey } from "./shared.js";
 
 export default class Files {
   init(p) {
@@ -87,8 +88,8 @@ export default class Files {
   render(cx) {
     this.follow(cx);
     const space = spaces().find((s) => s.active)?.id;
-    const shownFile = shared(`plato.viewer.${space}`);
-    const rows = treeRows(this.listings, this.open);
+    const shownFile = shared(viewerKey(space));
+    const rows = folderRows(this.listings, this.open);
     const row = (r, i) => {
       const abs = `${this.root}/${r.path}`;
       const el = div().id(`f-${i}`).pl(4 + r.depth * 14).truncate().cursor_pointer()

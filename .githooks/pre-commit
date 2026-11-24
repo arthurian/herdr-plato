@@ -1,0 +1,17 @@
+#!/bin/sh
+# Before each commit: the logic tests, ESLint and shellcheck. herdr-app check needs the
+# app, so run it by hand before a live test (see DEVELOPING.md). It checks the working tree,
+# not only what is staged. To skip it once: git commit --no-verify.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+if [ ! -d node_modules ]; then
+  echo "pre-commit: run npm install first (it installs ESLint and turns this hook on)." >&2
+  exit 1
+fi
+npm test --silent >/dev/null 2>&1 || { echo "pre-commit: tests failed. Run npm test to see why." >&2; exit 1; }
+npm run lint --silent || { echo "pre-commit: ESLint found problems (above)." >&2; exit 1; }
+if command -v shellcheck >/dev/null 2>&1; then
+  shellcheck install.sh sync.sh hooks/*.sh .githooks/pre-commit || { echo "pre-commit: shellcheck found problems (above)." >&2; exit 1; }
+else
+  echo "pre-commit: shellcheck is not installed, so the shell scripts were not checked." >&2
+fi

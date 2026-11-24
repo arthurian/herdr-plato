@@ -78,7 +78,7 @@ for (const mod of mods) {
   });
 }
 
-// The code's own names: slot, stop, code, free, map, column and badge. A railway word
+// The code's own names: slot, stop, code, free, agenda, column and badge. A railway word
 // anywhere in a mod's code fails, inside a camelCase name too. Names that come from
 // Herdr or GPUI do not count.
 const RAILWAY = /station|platform|vacan|roundel|track|yard/i;

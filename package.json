@@ -1,0 +1,14 @@
+{
+  "name": "herdr-plato",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint mods/plato",
+    "test": "cd mods/plato && node --test test/*.test.mjs",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0"
+  }
+}
