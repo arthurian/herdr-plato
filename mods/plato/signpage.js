@@ -210,7 +210,7 @@ export default class Sign {
     if (!t || this.saving) return;
     this.saving = true;
     cx.spawn(async (cx) => {
-      const r = await exec("hc", purposeArgs(t, this.fields[0].text)).catch((e) => ({ code: 1, stderr: String(e) }));
+      const r = await exec("hc", purposeArgs(t, this.fields[0].text, Date.now())).catch((e) => ({ code: 1, stderr: String(e) }));
       this.saving = false;
       if (r.code === 0) return this.close();
       this.msg = `hc label failed: ${(r.stderr || "").trim() || `exit ${r.code}`}`;

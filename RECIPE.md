@@ -342,7 +342,7 @@ The recorder also compares labels and the folder. For each terminal in a tab, it
 ### Labels on terminals
 
 - `plato.last` and `plato.last_at`: your last prompt and its time, written by the agent's hook (`hooks/claude-plato-last.sh` for Claude Code).
-- `plato.purpose_yours`: your purpose. SET PURPOSE runs `hc label <terminal> plato.purpose_yours=<text>` (`purposeArgs` in `sign.js`).
+- `plato.purpose_yours`: your purpose. SET PURPOSE runs `hc label <terminal> plato.purpose_yours=<text> plato.purpose_at=<unix seconds>` (`purposeArgs` in `sign.js`). A blank text clears your purpose and leaves `plato.purpose_at` as it is.
 - `plato.session`, `plato.session_how`, `plato.done` and `plato.done_at`: the session and result labels, an interface for any agent. `hooks/claude-plato-purpose.sh` sets the first two at SessionStart from the hook input (`session_id` and `source`). It also adds the instruction to set the other two at a milestone, and the posting rules for `plato-post`. The recorder logs each new value.
 - `plato.step`, `plato.step_at`, `plato.tasks`: the step labels, an interface for any agent. The strip hides a step older than `plato.last_at`. `hooks/claude-plato-step.sh` writes them for Claude Code, on PreToolUse and on PostToolUse for TodoWrite. `install.sh` gives it a 2 s timeout, because Claude Code waits for it before every tool call. The hook and `stepWords` turn control characters into spaces.
 

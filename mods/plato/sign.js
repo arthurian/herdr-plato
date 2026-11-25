@@ -195,9 +195,13 @@ export function editLine(state, ev) {
 
 /** SET PURPOSE: the hc arguments that set your purpose for a terminal (the label
  *  plato.purpose_yours, which wins over the agent's and the first prompt). The text is put
- *  on one line and trimmed; blank text clears the label, so the agent's purpose shows again. */
-export function purposeArgs(terminal, text) {
-  return ["label", terminal, `plato.purpose_yours=${String(text ?? "").replace(/\s+/g, " ").trim()}`];
+ *  on one line and trimmed; blank text clears the label, so the agent's purpose shows again.
+ *  A purpose also sets plato.purpose_at (unix seconds), so REVIEW's OPEN can list it with its
+ *  age; a clear leaves the time of the agent's purpose as it is. */
+export function purposeArgs(terminal, text, now) {
+  const t = String(text ?? "").replace(/\s+/g, " ").trim();
+  const args = ["label", terminal, `plato.purpose_yours=${t}`];
+  return t ? [...args, `plato.purpose_at=${Math.floor(now / 1000)}`] : args;
 }
 
 /** SET DUE's request to the route role, which alone writes the line: "due:c=2026-11-27", or

@@ -119,10 +119,11 @@ test("closeUpPlan: nothing to do on a line with no free letters, or none at all"
   assert.deepEqual(closeUpPlan(null), { free: [], moves: [] });
 });
 
-test("purposeArgs: hc label for your purpose, on one line; blank clears it", () => {
-  assert.deepEqual(purposeArgs("t3v", "  Ship the\nv2 API "), ["label", "t3v", "plato.purpose_yours=Ship the v2 API"]);
-  assert.deepEqual(purposeArgs("t3v", "   "), ["label", "t3v", "plato.purpose_yours="]);
-  assert.deepEqual(purposeArgs("t3v", null), ["label", "t3v", "plato.purpose_yours="]);
+test("purposeArgs: hc label for your purpose and its time, on one line; blank clears it", () => {
+  const now = 1795638409123;
+  assert.deepEqual(purposeArgs("t3v", "  Ship the\nv2 API ", now), ["label", "t3v", "plato.purpose_yours=Ship the v2 API", "plato.purpose_at=1795638409"]);
+  assert.deepEqual(purposeArgs("t3v", "   ", now), ["label", "t3v", "plato.purpose_yours="]);
+  assert.deepEqual(purposeArgs("t3v", null, now), ["label", "t3v", "plato.purpose_yours="]);
 });
 
 test("dueCommand and parseDueCommand: SET DUE's request to the route, a date or none", () => {

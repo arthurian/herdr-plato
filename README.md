@@ -356,7 +356,7 @@ PLATO reads a few labels on each terminal. The Claude Code hooks set them for Cl
 
 A tab can have three kinds of purpose, and the first one that is set wins:
 
-1. Yours: press `cmd-e` (PURPOSE), or right-click a tab and pick SET PURPOSE, then type it and press Enter. Leave it blank to remove it. In a script, use `hc label <terminal> "plato.purpose_yours=Ship the v2 API"`, and `hc label <terminal> plato.purpose_yours=` to remove it.
+1. Yours: press `cmd-e` (PURPOSE), or right-click a tab and pick SET PURPOSE, then type it and press Enter. Leave it blank to remove it. In a script, use `hc label <terminal> "plato.purpose_yours=Ship the v2 API" "plato.purpose_at=$(date +%s)"`, and `hc label <terminal> plato.purpose_yours=` to remove it. REVIEW uses `plato.purpose_at` to show the purpose's age in OPEN.
 2. The agent's: when the goal changes, the agent sets a new purpose, and the card says `· agent, revised`.
 3. The session's first prompt, until one of the others is set.
 
