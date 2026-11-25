@@ -699,6 +699,13 @@ export function coversWords(key) {
   return `covers ${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
+/** "record written 14:02": on today only, the time of the newest event in the day file, so
+ *  a record that stopped saving shows its old time. null on an earlier day or with no events. */
+export function writtenWords(key, events, now) {
+  if (key !== dayKey(now) || !events?.length) return null;
+  return `record written ${clock(Math.max(...events.map((e) => e.t)))}`;
+}
+
 /** A tab's key for its commits and hit: a merged tab's key (code and purpose), else its code. */
 export const hitKey = (t) => t.key ?? t.code;
 

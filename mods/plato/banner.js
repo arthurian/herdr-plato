@@ -8,6 +8,8 @@
 // "plato.arrival"; this role clears it after 4 s, or as soon as a prompt is sent there.
 // The count leaves out the agent you are at, so it agrees with NEXT1.
 // The banner also keeps the day record (recorder.js), because it is on screen in every view.
+// When the record is behind (a change waits unsaved, or the day file was never read), the
+// right side says "record not written for 47 min" in reverse video, before the date.
 //   commands: glow (plato.glow)
 
 import { div } from "gpui-kit";
@@ -21,6 +23,7 @@ import { LINE, ARRIVAL, NOTICE } from "./shared.js";
 import { noticeLive, noticeStale } from "./logic.js";
 import { keyText } from "./keys.js";
 import { Recorder } from "./recorder.js";
+import { behindWords } from "./day.js";
 
 const LIGHTS = 76; // room for the macOS window buttons
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -39,8 +42,9 @@ export default class Banner {
     this.recorder = new Recorder(cx);
     // A light check each second; it writes only when the arrival ends, which redraws the strip too.
     // The record is checked too, in case a change came without a render.
-    if (!checking()) cx.timer.every(1000, () => {
+    if (!checking()) cx.timer.every(1000, (cx) => {
       this.recorder.record(Date.now());
+      if (this.behindText() !== this.shownBehind) cx.notify(); // the warning comes, goes or ticks
       const a = shared(ARRIVAL);
       if (a && !arrivalLive(a, labelOf(terminals(), a.to?.terminal, "plato.last_at"), Date.now())) setShared(ARRIVAL, null);
       if (noticeStale(shared(NOTICE), Date.now())) setShared(NOTICE, null); // its two seconds are over
@@ -68,8 +72,16 @@ export default class Banner {
     cx.timer.after(60000 - (Date.now() % 60000) + 50, (cx) => { cx.notify(); this.tick(cx); });
   }
 
+  /** The warning that the record is behind, or null. */
+  behindText() {
+    const now = Date.now(), since = this.recorder.behind(now);
+    return since == null ? null : behindWords(since, now);
+  }
+
   render() {
     this.recorder.record(Date.now());
+    const behind = this.behindText();
+    this.shownBehind = behind;
     const f = focused();
     const space = spaces().find((s) => s.id === f?.space) ?? spaces().find((s) => s.active);
     const tab = space?.tabs.find((t) => t.id === f?.tab) ?? space?.tabs.find((t) => t.active);
@@ -99,6 +111,7 @@ export default class Banner {
     const right = h_flex().flex_none().gap(10).items_center()
       // A click on the count goes where NEXT1 goes, by the NEXT1 command itself.
       .when(waiting > 0, (el) => el.child(inv(`${waiting} need${waiting === 1 ? "s" : ""} you`).id("need-you").cursor_pointer().on_click(() => run("plato.next1"))))
+      .when(Boolean(behind), (el) => el.child(div().id("record-behind").flex_none().px(4).bg(C.bright).text_color(C.bg).tooltip("PLATO could not save today's record. REVIEW misses what happens until it saves again.").child(behind)))
       .child(dim(when(new Date())));
     return h_flex().id("banner").size_full().font_family(FONT).text_size(14).bg(C.bg).text_color(C.fg)
       .items_center().px(8).gap(10).border_b(1).border_color(C.fg)

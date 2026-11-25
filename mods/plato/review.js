@@ -25,7 +25,7 @@ import { GIT_TIMEOUT_MS } from "./stripdata.js";
 import {
   openDay, stepDay, tabFacts, hasTabLabels, openEmpty, dayBand, hitTimes, hitTimeWords, mergeTabs, sumTimes, hitKey, dayStats, doneCounts, openTabs, quietSpaces, parsePost, layoutPosts,
   countCommits, doneShares, badge, sourcesLine, resultRows, resultRowWords, reportFor, spaceNames, groupRows, resultCopyText, commentCopyText, resultCountWords, rowsBelow, moreWords, REVIEW_WORDS, reviewKeys, wantedDay, dayBounds,
-  coversWords, commitsByTab, resultTabs, dayWentRows, quietWords, openWords, byline, commentsHead, commentsWords, notOpen, bandLabel, bandMarks, switchBursts, bandHit, nowWords, burstLabels,
+  coversWords, writtenWords, commitsByTab, resultTabs, dayWentRows, quietWords, openWords, byline, commentsHead, commentsWords, notOpen, bandLabel, bandMarks, switchBursts, bandHit, nowWords, burstLabels,
   postNameOrder, postsShown, liveStop, leadSentence,
 } from "./reviewdata.js";
 import { REVIEW, KEYS_BACK, NOTICE, LINE } from "./shared.js";
@@ -292,6 +292,7 @@ export default class Review {
     return {
       key, today, empty: false,
       badge: badge({ posts: postsShown(posts, new Set(shown.map((h) => h.report).filter(Boolean)).size), countedAt: this.countedAt, soFar: today, empty: null }),
+      written: writtenWords(key, events, Date.now()),
       sources: sourcesLine({ hasLabels: hasTabLabels(events), hasPosts: this.posts.length > 0, hasGit: Boolean(this.git?.ok), counting: !this.git && Boolean(this.gitBusy) }),
       resultRows: shown, resultGroups,
       quiet: quietWords(quietSpaces(events, tabs)),
@@ -688,6 +689,7 @@ export default class Review {
     const head = h_flex().flex_none().gap(12).items_center()
       .child(div().text_color(C.bright).font_weight(700).child(REVIEW_WORDS.title))
       .child(div().text_color(C.dim).child(coversWords(m.key)))
+      .when(Boolean(m.written), (el) => el.child(div().text_color(C.dim).child(`· ${m.written}`)))
       .when(!m.empty, (el) => el.child(div().text_color(C.glow).child("│")).child(this.pageTabs()))
       .child(div().ml_auto().px(6).border_1().border_color(C.fg).child(m.badge))
       .child(close);

@@ -4,7 +4,7 @@ import { snapshot, changes } from "../day.js";
 import {
   VERBS, POST_KINDS, openDay, stepDay, tabFacts, dayStats, doneCounts, doneShares, openTabs, quietSpaces,
   parsePost, layoutPosts, countCommits, badge, sourcesLine, resultRows, resultRowWords, reportFor, REPORT_NEAR_MS, spaceNames, groupRows, resultCopyText, commentCopyText, resultCountWords, rowsBelow, moreWords, ROW_PX, GROUP_PX, GAP_PX, openWords,
-  REVIEW_WORDS, leadSentence, reviewKeys, commentsWords, hitKey, wantedDay, dayBounds, coversWords, commitsByTab, resultTabs, dayWentRows, quietWords,
+  REVIEW_WORDS, leadSentence, reviewKeys, commentsWords, hitKey, wantedDay, dayBounds, coversWords, writtenWords, commitsByTab, resultTabs, dayWentRows, quietWords,
   ageWords, byline, commentsHead, notOpen, bandLabel, bandMarks, switchBursts, hitIndexForCode, bandHit, nowWords, burstLabels, postNameOrder, postsShown, liveStop, hasTabLabels, openEmpty, dayBand, hitTimes, hitTimeWords, mergeTabs, sumTimes, latestReport,
 } from "../reviewdata.js";
 
@@ -895,4 +895,12 @@ test("resultCountWords: a space heading's count", () => {
 
 test("GROUP_PX: a space heading is a line with 10 px above it", () => {
   assert.equal(GROUP_PX, ROW_PX + 10);
+});
+
+test("writtenWords: the newest event's time, on today only", () => {
+  const now = new Date(2026, 10, 25, 15, 0).getTime();
+  const events = [{ t: new Date(2026, 10, 25, 9, 44).getTime() }, { t: new Date(2026, 10, 25, 10, 9).getTime() }];
+  assert.equal(writtenWords("2026-11-25", events, now), "record written 10:09");
+  assert.equal(writtenWords("2026-11-24", events, now), null);
+  assert.equal(writtenWords("2026-11-25", [], now), null);
 });

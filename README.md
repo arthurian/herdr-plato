@@ -228,6 +228,8 @@ The banner and NOW AT show the space, the tab and the purpose, so the strip leav
 
 The banner says "PLATO · space e compass · tab 1 api" on the left. On the right it shows how many other agents need you, the date and the clock. A click on "2 need you" does what NEXT1 does. After PLATO it names the current glow in dim text, for example "PLATO amber". The name is bright for two seconds after a change. A click on PLATO steps the glow, and its tooltip names the key, `cmd-shift-g`.
 
+If PLATO cannot save the day record, the banner says "record not written for 47 min" in reverse video, before the date. It shows when a change waits unsaved for more than a minute, or when today's file was not read at start. PLATO tries the write again every 10 seconds, and the warning goes away after a write succeeds. A quiet hour with no changes is not a warning, because PLATO writes only after a change.
+
 ### SIGN-ON, SIGN-OFF and CLOSE UP
 
 SIGN-ON (`cmd-n`) opens a new space. Type a name, then press NEXT. SIGN-ON shows the letter the space takes, which is the first free letter. → puts the space at the end of the line instead. The folder is optional. Type it as `~/…`, `/…` or a path in your home folder. Or click "choose…" or press `cmd-o`, and pick it in the system folder picker. PLATO does not look for a folder on its own. With no folder, the space starts in your home folder. The due date is also optional (`fri`, `27`, `11/27`, `+5`). Tab, ↓ and ↑ move between the fields.
@@ -323,7 +325,7 @@ Code counts every number from the day record, the tab labels and `git log`. No m
 
 A badge in the title line says what REVIEW knows. `FACTS ONLY` means that no agent posted that day. `FACTS + 9 POSTS` means that agents posted nine pieces. If a source is missing, a line under the title names it, because a missing source never shows as zero. A day with no record says so and gives the reason, for example "PLATO was not running".
 
-A past day shows that day's own values. REVIEW reads the record only while it is open.
+A past day shows that day's own values. REVIEW reads the record only while it is open. On today, the title line also says when the record was last written, for example "record written 14:02".
 
 To fill REVIEW with reports, comments and a note, agents use `plato-post` (see [For agents and scripts](#for-agents-and-scripts)). In Claude Code, `/plato-director` writes the note. REVIEW works without them.
 

@@ -5,7 +5,7 @@ import {
   sessions, build, slotKind, dueList, daysWords, dueWords,
   waits, responseWords, rowTotals, short, windowAxis, xAt, windowTicks, waitCode, SPANS, daysBefore,
   recordStep, freshDay,
-  LOGGED_LABELS, cutStep, oldPostFolders, WRITE_MS, writeStuck,
+  LOGGED_LABELS, cutStep, oldPostFolders, WRITE_MS, writeStuck, BEHIND_MS, behindSince, behindWords, retryDue,
 } from "../day.js";
 
 const at = (h, m = 0, s = 0) => new Date(2026, 10, 19, h, m, s).getTime(); // Thu 19 Nov 2026, local time
@@ -410,4 +410,27 @@ test("writeStuck: a write that runs longer than WRITE_MS is stuck", () => {
   assert.equal(writeStuck(null, NOW), false);
   assert.equal(writeStuck(NOW - WRITE_MS, NOW), false);
   assert.equal(writeStuck(NOW - WRITE_MS - 1, NOW), true);
+});
+
+test("behindSince: a slow first read or a change left unsaved past BEHIND_MS", () => {
+  const start = NOW - 10 * BEHIND_MS;
+  assert.equal(behindSince({ startedAt: NOW - 1000, ready: false, pendingAt: null }, NOW), null);
+  assert.equal(behindSince({ startedAt: start, ready: false, pendingAt: null }, NOW), start);
+  assert.equal(behindSince({ startedAt: start, ready: true, pendingAt: null }, NOW), null); // quiet, not behind
+  assert.equal(behindSince({ startedAt: start, ready: true, pendingAt: NOW - 5000 }, NOW), null);
+  assert.equal(behindSince({ startedAt: start, ready: true, pendingAt: NOW - BEHIND_MS - 1 }, NOW), NOW - BEHIND_MS - 1);
+});
+
+test("behindWords: minutes, then hours and minutes", () => {
+  const MIN = 60000;
+  assert.equal(behindWords(NOW - 47 * MIN - 30000, NOW), "record not written for 47 min");
+  assert.equal(behindWords(NOW - 60 * MIN, NOW), "record not written for 1 h");
+  assert.equal(behindWords(NOW - 125 * MIN, NOW), "record not written for 2 h 5 min");
+});
+
+test("retryDue: an unsaved change is written again WRITE_MS after the last try", () => {
+  assert.equal(retryDue(true, false, NOW - WRITE_MS - 1, NOW), true);
+  assert.equal(retryDue(true, false, NOW - 1000, NOW), false);
+  assert.equal(retryDue(true, true, NOW - WRITE_MS - 1, NOW), false); // a write runs
+  assert.equal(retryDue(false, false, NOW - WRITE_MS - 1, NOW), false); // all saved
 });

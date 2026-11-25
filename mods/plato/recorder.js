@@ -9,7 +9,7 @@
 import { spaces, panes, terminals, focused, shared, appHome, readTextFile, checking } from "herdr";
 import * as fs from "fs/promises";
 import { stops, currentStop } from "./line.js";
-import { dayKey, oldDayFiles, oldPostFolders, worldOf, dayText, parseDay, recordStep, writeStuck } from "./day.js";
+import { dayKey, oldDayFiles, oldPostFolders, worldOf, dayText, parseDay, recordStep, writeStuck, behindSince, retryDue } from "./day.js";
 import { LINE } from "./shared.js";
 
 const DIR = "plato-data";
@@ -20,6 +20,9 @@ export class Recorder {
     this.state = { day: dayKey(Date.now()), events: null, prev: null };
     this.writing = Promise.resolve();
     this.running = null; // the write in progress: { at }, or null
+    this.startedAt = Date.now();
+    this.pendingAt = null; // when the oldest change still unsaved came, or null
+    this.asked = null; // when the newest write was asked for
     if (checking()) return;
     cx.spawn(async () => {
       const text = await readTextFile(this.file(this.state.day)).catch(() => null);
@@ -52,12 +55,16 @@ export class Recorder {
     const w = worldOf(line, sp, all, currentStop(all, focused())?.code ?? null, terminals(), ps);
     const { write, ...next } = recordStep(this.state, w, now);
     this.state = next;
-    if (write) this.save();
+    // A write that failed leaves the change unsaved; try again while nothing is running.
+    if (write || retryDue(this.pendingAt != null, this.running != null, this.asked, now)) this.save();
   }
 
   save() {
     this.unstick();
     const { day, events } = this.state, text = dayText(day, events);
+    const asked = Date.now();
+    this.asked = asked;
+    this.pendingAt ??= asked;
     this.writing = this.writing
       .then(async () => {
         const job = { at: Date.now() };
@@ -65,6 +72,8 @@ export class Recorder {
         try {
           await fs.mkdir(`${appHome()}/${DIR}`, { recursive: true });
           await fs.writeFile(this.file(day), text);
+          // Saved; a newer write still waiting keeps the record pending.
+          this.pendingAt = this.asked === asked ? null : this.asked;
         } finally {
           if (this.running === job) this.running = null;
         }
@@ -79,6 +88,12 @@ export class Recorder {
     console.log("plato recorder: dropped a stuck write");
     this.running = null;
     this.writing = Promise.resolve();
+  }
+
+  /** Since when the record is behind at now, or null (day.js behindSince). The banner warns. */
+  behind(now) {
+    if (checking()) return null;
+    return behindSince({ startedAt: this.startedAt, ready: this.state.events != null, pendingAt: this.pendingAt }, now);
   }
 
   /** The app quits or the layout changes: end the session, so the time until the next start

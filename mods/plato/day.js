@@ -268,6 +268,32 @@ export function writeStuck(at, now) {
   return at != null && now - at > WRITE_MS;
 }
 
+/** A change waits unsaved (pending), no write runs, and the last write was asked for more than
+ *  WRITE_MS before now: the recorder writes again, so a full disk or a lost permission heals. */
+export function retryDue(pending, running, asked, now) {
+  return pending && !running && asked != null && now - asked > WRITE_MS;
+}
+
+/** How long a change may wait unsaved, or the first read of the day file may run, before the
+ *  banner warns that the record is behind. */
+export const BEHIND_MS = 60000;
+
+/** Since when the record is behind at now, or null. The first read has not ended (ready
+ *  false) BEHIND_MS after the start, or a change waits unsaved since pendingAt for longer than
+ *  BEHIND_MS. The recorder writes only on a change, so a quiet hour is not behind. */
+export function behindSince({ startedAt, ready, pendingAt }, now) {
+  if (!ready && now - startedAt > BEHIND_MS) return startedAt;
+  if (pendingAt != null && now - pendingAt > BEHIND_MS) return pendingAt;
+  return null;
+}
+
+/** The banner's warning: "record not written for 47 min", "... for 2 h 5 min". */
+export function behindWords(since, now) {
+  const m = Math.floor((now - since) / MIN);
+  const t = m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
+  return `record not written for ${t}`;
+}
+
 /** The windows TODAY steps through on a click: the last 2, 6, 12 or 24 hours. */
 export const SPANS = [2, 6, 12, 24].map((h) => h * HOUR);
 
