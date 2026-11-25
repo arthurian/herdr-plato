@@ -60,6 +60,7 @@ PLATO adds a few ideas on top:
 - The work area in the middle shows the current tab. A strip under each pane gives its code, its git branch, the agent's progress and its state. While an agent needs you, it also says what the agent waits to do.
 - The right column has four panels. SIGNALS lists who needs you. NOW AT shows where your keys go now, the tab's purpose and your last prompt there. TODAY shows who waited on you today. FILES shows the project's folder tree.
 - The keyset along the bottom shows the PLATO keys. A click on a key runs it.
+- REVIEW (`cmd-shift-r`) covers the route and the work area with your day: every result, grouped by space, with the time line of the day under it. Press `cmd-shift-r` again to close it.
 
 PLATO works by mouse too. A click on anything that says an agent needs you takes you there. A right-click on a space or a tab opens a menu of its actions.
 
@@ -68,8 +69,8 @@ PLATO works by mouse too. A click on anything that says an agent needs you takes
 | ![The arrival banner, the strip in reverse video and NOW AT marked "changed" after NEXT1](previews/arrival.png) | ![The route with a dashed NEXT1 run to the agent that waited longest, in another space. A second waiting agent in this space shows its bright lamp. Both spaces have WAITING tags.](previews/next1.png) |
 | Sign-on | Focus mode (`cmd-shift-f`) |
 | ![SIGN-ON: the letter the new space takes, its name, an optional folder and an optional due date](previews/sign-on.png) | ![Focus mode. The route is a column of lettered squares, with WAIT under a waiting space. The right column is hidden. A flashing SIGNAL line shows above the keys.](previews/focus.png) |
-| LOOK (the Space bar) | |
-| ![LOOK for a waiting agent: the code, space and tab with a NEEDS YOU badge, and that NEXT1 goes there first. Then come its purpose from the first prompt and the last prompt, sent 38 minutes ago. Below are the folder, the space with its due date, today and sub-agents, and the keys to go or close.](previews/look.png) | |
+| LOOK (the Space bar) | THE PLATO REVIEW (`cmd-shift-r`) |
+| ![LOOK for a waiting agent: the code, space and tab with a NEEDS YOU badge, and that NEXT1 goes there first. Then come its purpose from the first prompt and the last prompt, sent 38 minutes ago. Below are the folder, the space with its due date, today and sub-agents, and the keys to go or close.](previews/look.png) | ![THE PLATO REVIEW for a demo day: RESULTS grouped by space, each space's letter in a box with its count of results, the picked result with its purpose and report, DONE, OPEN and HOW IT WENT at the right, and TIMELINE across the lower half.](previews/review.png) |
 
 The spaces, tabs and agents in these pictures are made up for the demo.
 
