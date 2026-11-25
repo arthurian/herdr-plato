@@ -1,0 +1,146 @@
+#!/bin/sh
+# plato-post: post a report, a comment or a note to REVIEW.
+# Usage: plato-post <report|comment|note> [text] [--day YYYY-MM-DD]
+#        plato-post --help
+# Without text it reads standard input. It writes
+#   $HERDR_APP_HOME/plato-data/posts/<day>/<unix seconds>-<terminal or none>-<kind>.md
+# (HERDR_APP_HOME defaults to ~/.config/herdr-app) and prints that path. If the name
+# exists it adds -2, -3 and so on. The file is three header lines (kind, terminal, time),
+# an empty line, then the text. The terminal is HC_TERMINAL_ID, or none.
+# A comment starts with "You" or "Your". A terminal sends at most one comment an hour:
+# plato-post refuses a sooner one.
+# For tests only: PLATO_POST_NOW (unix seconds) replaces the current time.
+
+usage() {
+  cat <<'HELP'
+Usage: plato-post <report|comment|note> [text] [--day YYYY-MM-DD]
+
+Posts to REVIEW. Without text, it reads standard input.
+Text that is longer than the limit is refused, never cut.
+
+Kinds and limits:
+  report     280 characters
+  comment    400 characters
+  note       1500 characters
+
+When to post:
+  A report: each time you set plato.done, also send one report of one or two
+  sentences with the facts behind the result.
+  A comment: friction you saw more than once in this session in how the person
+  works with you, or a habit that clearly saved time. It starts with "You" or
+  "Your" and gives one fact. It ends with one lasting change that would remove
+  the friction: a permission rule, a line in CLAUDE.md or AGENTS.md, a skill, a
+  script, or a change in how files, handoffs or status files are organized.
+  Never suggest more detail at the start: exploring in conversation is on
+  purpose. The state of the work, risks and advice about PLATO are not
+  comments. A terminal sends at most one comment an hour; a sooner comment is
+  refused.
+  A note: only an agent that the person starts as the director writes one.
+  Other agents never do.
+
+Examples:
+  plato-post report "Fixed the login bug. The session cookie lacked a path, so the test failed."
+  plato-post comment "You approved npm test four times today. A permission rule for it would stop the asks."
+  echo "Three tasks shipped today; the auth work is still open." | plato-post note
+HELP
+}
+
+fail() {
+  echo "plato-post: $1" >&2
+  exit 1
+}
+
+kind=
+text=
+have_text=0
+day=
+while [ $# -gt 0 ]; do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --day)
+      [ $# -ge 2 ] || fail "--day needs a date (YYYY-MM-DD)"
+      day=$2
+      shift 2
+      ;;
+    *)
+      if [ -z "$kind" ]; then
+        kind=$1
+      elif [ "$have_text" = 0 ]; then
+        text=$1
+        have_text=1
+      else
+        fail "too many arguments (put the text in quotes)"
+      fi
+      shift
+      ;;
+  esac
+done
+
+case $kind in
+  report) limit=280 ;;
+  comment) limit=400 ;;
+  note) limit=1500 ;;
+  *) fail "kind must be report, comment or note" ;;
+esac
+
+if [ -n "$day" ]; then
+  case $day in
+    [0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]) ;;
+    *) fail "--day must look like 2026-11-23" ;;
+  esac
+else
+  day=$(date +%Y-%m-%d)
+fi
+
+[ "$have_text" = 1 ] || text=$(cat)
+case $text in
+  *[![:space:]]*) ;;
+  *) fail "the text is empty" ;;
+esac
+
+[ -n "$LC_ALL" ] || LC_ALL=en_US.UTF-8
+export LC_ALL
+if [ "$kind" = comment ]; then
+  case ${text#"${text%%[![:space:]]*}"} in
+    You | Your | You[!A-Za-z]* | Your[!A-Za-z]*) ;;
+    *) fail "a comment starts with \"You\" or \"Your\": it says what the person did" ;;
+  esac
+fi
+
+count=$(printf '%s' "$text" | wc -m | tr -d ' ')
+[ "$count" -le "$limit" ] || fail "a $kind is at most $limit characters; this text has $count"
+
+now=${PLATO_POST_NOW:-$(date +%s)}
+term=$(printf '%s' "$HC_TERMINAL_ID" | tr -cd 'A-Za-z0-9_.-')
+[ -n "$term" ] || term=none
+
+root="${HERDR_APP_HOME:-$HOME/.config/herdr-app}/plato-data/posts"
+# One comment an hour from a terminal: the newest comment of this terminal, on any day.
+if [ "$kind" = comment ] && [ "$term" != none ]; then
+  last=0
+  for f in "$root"/*/*-"$term"-comment*.md; do
+    [ -e "$f" ] || continue
+    t=${f##*/}
+    t=${t%%-*}
+    case $t in '' | *[!0-9]*) continue ;; esac
+    [ "$t" -gt "$last" ] && last=$t
+  done
+  left=$((last + 3600 - now))
+  if [ "$last" -gt 0 ] && [ "$left" -gt 0 ]; then
+    ago=$((now - last))
+    fail "one comment an hour: $term sent one $((ago / 3600))h$(printf %02d $((ago % 3600 / 60))) ago, so the next can go in $((left / 3600))h$(printf %02d $((left % 3600 / 60)))"
+  fi
+fi
+
+dir="$root/$day"
+mkdir -p "$dir" 2>/dev/null || fail "cannot create $dir"
+base="$dir/$now-$term-$kind"
+file="$base.md"
+n=1
+# noclobber makes the create atomic, so two posts in the same second do not collide.
+while ! (set -C; printf 'kind: %s\nterminal: %s\ntime: %s\n\n%s\n' "$kind" "$term" "$now" "$text" >"$file") 2>/dev/null; do
+  [ -e "$file" ] || fail "cannot write $file"
+  n=$((n + 1))
+  file="$base-$n.md"
+done
+printf '%s\n' "$file"

@@ -2,9 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   dayKey, dayStart, oldDayFiles, KEEP_DAYS, worldOf, snapshot, changes, dayText, parseDay,
-  sessions, gaps, build, slotKind, dueList, daysWords, dueWords,
+  sessions, build, slotKind, dueList, daysWords, dueWords,
   waits, responseWords, rowTotals, short, windowAxis, xAt, windowTicks, waitCode, SPANS, daysBefore,
-  daySegs, segTotals, dayAxis, yAt, daySegsCached, recordStep, freshDay,
+  recordStep, freshDay,
+  LOGGED_LABELS, cutStep, oldPostFolders, WRITE_MS, writeStuck,
 } from "../day.js";
 
 const at = (h, m = 0, s = 0) => new Date(2026, 10, 19, h, m, s).getTime(); // Thu 19 Nov 2026, local time
@@ -28,6 +29,7 @@ test("worldOf: occupied letters with names, agents with a state, the focus code"
     slots: { a: { space: "s1", name: "plans" } },
     agents: { t1: { c: "a1", s: "working" } },
     focus: "a1",
+    tabs: { t1: { c: "a1", l: {}, cwd: null }, t2: { c: "a2", l: {}, cwd: null } },
   });
 });
 
@@ -87,15 +89,6 @@ test("sessions: open to close; a missing close (a reload) runs to the next open;
   ]);
   assert.deepEqual(sessions(evs, NOW, false).at(-1), { from: at(14), to: at(14, 10) });
   assert.deepEqual(sessions([{ t: 1, e: "focus", c: "a1" }], NOW), []); // nothing before an open counts
-});
-
-test("gaps: the closed stretches between sessions, and before and after them", () => {
-  const ses = [{ from: at(9), to: at(11) }, { from: at(12), to: at(12, 30) }, { from: at(14), to: NOW }];
-  assert.deepEqual(gaps(ses, at(8), NOW), [
-    { from: at(8), to: at(9) }, { from: at(11), to: at(12) }, { from: at(12, 30), to: at(14) },
-  ]);
-  assert.deepEqual(gaps([], at(8), at(9)), [{ from: at(8), to: at(9) }]);
-  assert.deepEqual(gaps([{ from: at(8), to: at(9) }], at(8), at(10)), [{ from: at(9), to: at(10) }]);
 });
 
 test("slotKind: blocked is a wait, working is a run, done and idle are idle", () => {
@@ -167,7 +160,7 @@ test("dueList: occupied slots with a due date, soonest first, with days left", (
   assert.equal(daysWords(-2), "2 late");
 });
 
-test("dueWords: the due date and days left as the agenda says them", () => {
+test("dueWords: the due date and days left, in words", () => {
   assert.equal(dueWords({ label: "Fri 27", days: 3 }), "due Fri 27 · 3 days");
   assert.equal(dueWords({ label: "Fri 20", days: 1 }), "due Fri 20 · 1 day");
   assert.equal(dueWords({ label: "Thu 19", days: 0 }), "due Thu 19 · today");
@@ -304,78 +297,6 @@ test("oldDayFiles: day files older than the days kept, and nothing else", () => 
   assert.equal(KEEP_DAYS, 60);
 });
 
-const MIN = 60000, HOUR = 60 * MIN; // day.test.mjs has no MIN or HOUR yet
-
-test("daySegs: ran and waited stretches and your time, per letter and space name", () => {
-  const ev = [
-    { t: at(9), e: "open" },
-    { t: at(9), e: "line", l: "c", n: "orbit" },
-    { t: at(9), e: "agent", a: "t1", c: "c1", s: "working" },
-    { t: at(9), e: "focus", c: "c1" },
-    { t: at(10), e: "agent", a: "t1", c: "c1", s: "blocked" },
-    { t: at(10, 30), e: "focus", c: null },
-    { t: at(11), e: "agent", a: "t1", c: "c1", s: "idle" },
-  ];
-  const d = daySegs(ev, at(12), true);
-  assert.deepEqual(d.c.orbit.segs, [{ from: at(9), to: at(10), kind: "ran" }, { from: at(10), to: at(11), kind: "wait" }]);
-  assert.deepEqual(d.c.orbit.you, [{ from: at(9), to: at(10, 30) }]);
-  assert.deepEqual(segTotals(d.c.orbit), { ran: HOUR, wait: HOUR, you: 90 * MIN });
-});
-
-test("daySegs: a letter that changes space keeps each space's time apart", () => {
-  const ev = [
-    { t: at(9), e: "open" },
-    { t: at(9), e: "line", l: "c", n: "orbit" },
-    { t: at(9), e: "agent", a: "t1", c: "c1", s: "working" },
-    { t: at(10), e: "agent", a: "t1", c: "c1", s: null },
-    { t: at(10), e: "line", l: "c", n: null },
-    { t: at(10, 30), e: "line", l: "c", n: "dune" },
-    { t: at(10, 30), e: "agent", a: "t2", c: "c1", s: "working" },
-    { t: at(11), e: "close" },
-  ];
-  const d = daySegs(ev, at(12), false);
-  assert.deepEqual(d.c.orbit.segs, [{ from: at(9), to: at(10), kind: "ran" }]);
-  assert.deepEqual(d.c.dune.segs, [{ from: at(10, 30), to: at(11), kind: "ran" }]);
-});
-
-test("segTotals: a missing entry is zero", () => {
-  assert.deepEqual(segTotals(undefined), { ran: 0, wait: 0, you: 0 });
-});
-
-test("dayAxis: from the hour of the first session to now, with each whole hour", () => {
-  const a = dayAxis([{ from: at(8, 42), to: NOW }], NOW);
-  assert.equal(a.from, at(8));
-  assert.equal(a.to, NOW);
-  assert.deepEqual(a.hours, [8, 9, 10, 11, 12, 13, 14, 15].map((h) => at(h)));
-});
-
-test("dayAxis: no session today starts at the hour before now", () => {
-  assert.equal(dayAxis([], NOW).from, at(14));
-});
-
-test("dayAxis: a session from yesterday starts at midnight", () => {
-  assert.equal(dayAxis([{ from: at(0) - HOUR, to: NOW }], NOW).from, at(0));
-});
-
-test("yAt: top, bottom and middle, and clamped outside the axis", () => {
-  const a = { from: at(8), to: at(16), hours: [] };
-  assert.equal(yAt(a, 480, at(8)), 0);
-  assert.equal(yAt(a, 480, at(16)), 480);
-  assert.equal(yAt(a, 480, at(12)), 240);
-  assert.equal(yAt(a, 480, at(7)), 0);
-  assert.equal(yAt(a, 480, at(17)), 480);
-});
-
-test("daySegsCached: the same replay within a minute, a new one after it, equal to daySegs", () => {
-  const ev = [{ t: at(9), e: "open" }, { t: at(9), e: "line", l: "c", n: "orbit" }, { t: at(9), e: "agent", a: "t1", c: "c1", s: "working" }];
-  const a = daySegsCached(ev, at(10, 0, 5), true);
-  assert.equal(daySegsCached(ev, at(10, 0, 40), true), a);
-  assert.deepEqual(a, daySegs(ev, at(10, 0, 5), true));
-  const b = daySegsCached(ev, at(10, 1, 5), true);
-  assert.notEqual(b, a);
-  assert.equal(b.c.orbit.segs[0].to, at(10, 1, 5));
-});
-
 test("recordStep: the first world is a snapshot, the same world adds nothing, a change adds its events", () => {
   const w1 = world({ a: { space: "s1", name: "plans" } }, { t1: { c: "a1", s: "working" } }, "a1");
   const s1 = recordStep({ day: "2026-11-19", events: [], prev: null }, w1, at(9));
@@ -417,4 +338,76 @@ test("freshDay: a shorter read of the same day is a file caught mid-write, so th
   const nextDay = { key: "2026-11-20", events: [] };
   assert.equal(freshDay(a, nextDay), nextDay);
   assert.equal(freshDay(null, nextDay), nextDay);
+});
+
+test("cutStep keeps the first two words of a Bash command and only the tool name otherwise", () => {
+  assert.equal(cutStep("Bash: npm test -- --watch"), "Bash: npm test");
+  assert.equal(cutStep("Bash: git commit -m \"secret words\""), "Bash: git commit");
+  assert.equal(cutStep("Edit route.js"), "Edit");
+  assert.equal(cutStep("Agent: find the bug"), "Agent");
+  assert.equal(cutStep(""), null);
+  assert.equal(cutStep(null), null);
+});
+
+test("changes writes a label event for each logged label that changed, and never for plato.first or plato.last", () => {
+  const a = { slots: {}, agents: {}, focus: null, tabs: { t1: { c: "f1", cwd: "/r", l: { "plato.done": "fixed tests" } } } };
+  const b = { slots: {}, agents: {}, focus: null, tabs: { t1: { c: "f1", cwd: "/r2", l: { "plato.done": "built export", "plato.first": "my prompt" } } } };
+  assert.deepEqual(changes(a, b, 5), [
+    { t: 5, e: "label", a: "t1", c: "f1", k: "cwd", v: "/r2" },
+    { t: 5, e: "label", a: "t1", c: "f1", k: "plato.done", v: "built export" },
+  ]);
+});
+
+test("a blocked agent event carries the cut step", () => {
+  const w = worldOf(null, [], [{ code: "a1", terminal: "t1", status: "blocked" }], null,
+    [{ address: "t1", labels: { "plato.step": "Bash: npm test --watch" } }], []);
+  assert.deepEqual(w.agents.t1, { c: "a1", s: "blocked", st: "Bash: npm test" });
+});
+
+test("worldOf keeps only logged labels and the folder in tabs", () => {
+  const w = worldOf(null, [], [{ code: "a1", terminal: "t1", status: "idle" }], null,
+    [{ address: "t1", labels: { "plato.done": "x", "plato.first": "secret", "plato.step": "Bash: ls -la" } }],
+    [{ terminal: "t1", cwd: "/r" }]);
+  assert.deepEqual(w.tabs.t1, { c: "a1", l: { "plato.done": "x" }, cwd: "/r" });
+  assert.deepEqual(w.agents.t1, { c: "a1", s: "idle" });
+  assert.ok(LOGGED_LABELS.includes("plato.tasks"));
+});
+
+test("snapshot states each tab's logged labels and folder", () => {
+  const w = { slots: {}, agents: {}, focus: null, tabs: { t1: { c: "a1", cwd: "/r", l: { "plato.done": "x", "plato.purpose": "p" } }, t2: { c: "a2", cwd: null, l: {} } } };
+  const ev = snapshot(w, 9).filter((e) => e.e === "label");
+  assert.deepEqual(ev, [
+    { t: 9, e: "label", a: "t1", c: "a1", k: "cwd", v: "/r" },
+    { t: 9, e: "label", a: "t1", c: "a1", k: "plato.done", v: "x" },
+    { t: 9, e: "label", a: "t1", c: "a1", k: "plato.purpose", v: "p" },
+  ]);
+});
+
+test("a label that is gone is written with v null", () => {
+  const a = { slots: {}, agents: {}, focus: null, tabs: { t1: { c: "f1", cwd: "/r", l: { "plato.done": "x" } } } };
+  const b = { slots: {}, agents: {}, focus: null, tabs: { t1: { c: "f1", cwd: "/r", l: {} } } };
+  assert.deepEqual(changes(a, b, 6), [{ t: 6, e: "label", a: "t1", c: "f1", k: "plato.done", v: null }]);
+});
+
+test("oldPostFolders picks dated folders older than the cutoff", () => {
+  const now = Date.parse("2026-11-24T12:00:00");
+  assert.deepEqual(oldPostFolders(["2026-09-01", "2026-11-20", "notes"], now), ["2026-09-01"]);
+});
+
+test("a day file from before labels still parses and builds", () => {
+  const text = dayText("2026-11-19", [
+    { t: at(9), e: "open" },
+    { t: at(9), e: "line", l: "a", n: "plans" },
+    { t: at(9), e: "agent", a: "t1", c: "a1", s: "working" },
+    { t: at(9), e: "focus", c: "a1" },
+  ]);
+  const ev = parseDay(text);
+  assert.equal(ev.length, 4);
+  assert.doesNotThrow(() => build(ev, NOW));
+});
+
+test("writeStuck: a write that runs longer than WRITE_MS is stuck", () => {
+  assert.equal(writeStuck(null, NOW), false);
+  assert.equal(writeStuck(NOW - WRITE_MS, NOW), false);
+  assert.equal(writeStuck(NOW - WRITE_MS - 1, NOW), true);
 });

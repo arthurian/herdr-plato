@@ -28,7 +28,7 @@ You need the [Herdr](https://herdr.dev) desktop app on macOS. The install script
    - `cmd-n` (SIGN-ON): open a new space for a project. Type a name, and press `cmd-enter`. A folder is optional.
    - `cmd-enter` (NEXT): go to the next tab.
    - `cmd-]` (NEXT1): go to the agent that waited longest for you.
-   - `cmd-shift-a` (AGENDA): see your day and week across your spaces.
+   - `cmd-shift-r` (REVIEW): read what each space got done today, or on the last day you worked.
    - `cmd-/` (HELP): see all the keys and words.
 
 ### Stop using PLATO
@@ -63,13 +63,13 @@ PLATO adds a few ideas on top:
 
 PLATO works by mouse too. A click on anything that says an agent needs you takes you there. A right-click on a space or a tab opens a menu of its actions.
 
-| The agenda (`cmd-shift-a`) | Arrival after a jump |
+| Arrival after a jump | NEXT1 drawn on the route |
 | --- | --- |
-| ![The agenda's TODAY view. Each space is a column with its due date and its day in words, or a QUIET tag. Under each head, a box of today's hours shows where agents ran, waited on you (WAIT) and where you were. The tabs hang under the box. The header has TODAY and WEEK and counts 7 spaces and 19 tabs. On the right, SIGNALS, NOW AT and the DUE list.](previews/agenda.png) | ![The arrival banner, the strip in reverse video and NOW AT marked "changed" after NEXT1](previews/arrival.png) |
-| NEXT1 drawn on the route | Sign-on |
-| ![The route with a dashed NEXT1 run to the agent that waited longest, in another space. A second waiting agent in this space shows its bright lamp. Both spaces have WAITING tags.](previews/next1.png) | ![SIGN-ON: the letter the new space takes, its name, an optional folder and an optional due date](previews/sign-on.png) |
-| Focus mode (`cmd-shift-f`) | LOOK (the Space bar in the agenda) |
-| ![Focus mode. The route is a column of lettered squares, with WAIT under a waiting space. The right column is hidden. A flashing SIGNAL line shows above the keys.](previews/focus.png) | ![LOOK over the agenda for a waiting agent: the code, space and tab with a NEEDS YOU badge, that NEXT1 goes there first, its purpose from the first prompt, and the last prompt, sent 38 minutes ago. Below are the folder, the space with its due date, today and sub-agents, and the keys to go or close.](previews/look.png) |
+| ![The arrival banner, the strip in reverse video and NOW AT marked "changed" after NEXT1](previews/arrival.png) | ![The route with a dashed NEXT1 run to the agent that waited longest, in another space. A second waiting agent in this space shows its bright lamp. Both spaces have WAITING tags.](previews/next1.png) |
+| Sign-on | Focus mode (`cmd-shift-f`) |
+| ![SIGN-ON: the letter the new space takes, its name, an optional folder and an optional due date](previews/sign-on.png) | ![Focus mode. The route is a column of lettered squares, with WAIT under a waiting space. The right column is hidden. A flashing SIGNAL line shows above the keys.](previews/focus.png) |
+| LOOK (the Space bar) | |
+| ![LOOK for a waiting agent: the code, space and tab with a NEEDS YOU badge, and that NEXT1 goes there first. Then come its purpose from the first prompt and the last prompt, sent 38 minutes ago. Below are the folder, the space with its due date, today and sub-agents, and the keys to go or close.](previews/look.png) | |
 
 The spaces, tabs and agents in these pictures are made up for the demo.
 
@@ -79,8 +79,8 @@ The spaces, tabs and agents in these pictures are made up for the demo.
 - Add a terminal or agent to the project: press `cmd-l` (LAB).
 - See who needs you: look at SIGNALS, or press `cmd-]` (NEXT1) to go to the agent that waited longest.
 - Go to a tab you know: press `cmd-j`, then type its code, such as `c3`, and press Enter.
-- See your day: open the agenda with `cmd-shift-a`. For each space, it shows when the agents ran or waited on you, your time there, and the due date. Press Tab for the week.
-- Look at an agent before you go there: open the agenda with `cmd-shift-a`, select its tab, and press the Space bar (LOOK). LOOK shows the purpose, the last prompt you sent and how long the agent worked or waited. Press Enter to go, or the Space bar to stay.
+- Read your day: press `cmd-shift-r` (REVIEW). For each tab that did something, it shows the latest result, the todo progress and the commits. Press ← for the day before.
+- Look at an agent before you go there: press `cmd-shift-r`, pick its result with ↑ and ↓, and press the Space bar (LOOK). LOOK shows the purpose, the last prompt you sent and how long the agent worked or waited. Press Enter to go, or the Space bar to stay.
 - Go back to where you were: press `cmd-[` (BACK1). Press it again to switch between your last two places.
 - Concentrate on one tab: press `cmd-shift-f` (FOCUS). The right column hides. When an agent needs you, a SIGNAL line still tells you.
 - Finish a project: press `cmd-alt-w` (SIGN-OFF). It shows a summary first, and only NEXT closes the space.
@@ -94,7 +94,7 @@ The spaces, tabs and agents in these pictures are made up for the demo.
 | `cmd-shift-enter` | BACK | Go to the tab before this one on the line. On SIGN-ON or SIGN-OFF, cancel. |
 | `cmd-]` | NEXT1 | Go to the agent that waits longest for you. |
 | `cmd-[` | BACK1 | Return to where you were before. |
-| `cmd-shift-a` | AGENDA | Open the agenda of your day or week, or close it. |
+| `cmd-shift-r` | REVIEW | Open the review of your day, or close it. |
 | `cmd-j` | JUMP | Find a tab by its code, name, purpose or folder, and go there. |
 | `cmd-shift-t` | TREE | Show every space's tabs on the route, or only this one's. |
 | `cmd-n` | SIGN-ON | Open a new space. |
@@ -103,6 +103,7 @@ The spaces, tabs and agents in these pictures are made up for the demo.
 | `cmd-l` | LAB | Add a tab (a terminal or agent) to this space. |
 | `cmd-e` | PURPOSE | Set your purpose for this tab. |
 | `cmd-shift-e` | DUE | Set or clear this space's due date. |
+| `cmd-o` | FOLDER | Open this tab's folder in the file manager: Finder on macOS, Explorer on Windows, the desktop's default on Linux. |
 | `cmd-shift-f` | FOCUS | Hide the right column and narrow the route, or bring them back. |
 | `cmd-/` | HELP | Show the PLATO keys. |
 | `cmd-k` | KEYS | Then one plain letter runs any PLATO command (see [the ⌘K panel](#the-k-panel-keys)). |
@@ -110,8 +111,6 @@ The spaces, tabs and agents in these pictures are made up for the demo.
 | `cmd-shift-g` | GLOW | Step the glow. |
 | `cmd-w` | CLOSE | Close an open PLATO dialog, else the tab. |
 | `cmd-shift-z` | ZOOM | Zoom the pane (Herdr's `cmd-shift-enter` is BACK in this layout). |
-
-In the agenda, SIGN-OFF, LAB, PURPOSE and DUE act on the space or tab under the cursor.
 
 The keys are in the `layout:plato` section of `keys.json`, so they apply only in this layout.
 
@@ -141,11 +140,12 @@ The four classic glows recreate the terminals of the 1970s and 80s. Orange is th
 
 ## Claude Code hooks
 
-Three optional hooks let Claude Code tell PLATO what it is doing:
+Three optional hooks let Claude Code tell PLATO what it is doing, and a skill lets it write the director's note for REVIEW:
 
 - Your last prompt: NOW AT shows the last prompt you sent to each tab.
 - The purpose: once your task is clear, Claude sets a short purpose for its tab. LOOK, the hover detail and NOW AT show it.
 - The step: the strip under Claude's pane shows its progress, such as `3/7`. While Claude needs you, the strip also shows what it waits to do, such as `Bash: git push`.
+- The director: type `/plato-director` in Claude Code to get a draft note for today, from the day's reports, comments, purposes and commits. Claude posts it to REVIEW only after you approve it. Add a day, such as `/plato-director 2026-11-23`, for an earlier day. Claude never starts the director by itself.
 
 To turn them on, install `jq` (`brew install jq`) and run:
 
@@ -153,7 +153,7 @@ To turn them on, install `jq` (`brew install jq`) and run:
 ./install.sh --hooks
 ```
 
-The script adds the hooks to `~/.claude/settings.json` and keeps a copy of the old file as `settings.json.before-plato`. It also lets Claude run `hc label` without a question, and outside Claude Code's sandbox, where `hc` cannot reach Herdr. Claude Code sessions that start after the install use the hooks. To remove them, run `./install.sh --hooks --remove`.
+The script adds the hooks to `~/.claude/settings.json` and keeps a copy of the old file as `settings.json.before-plato`. It also lets Claude run `hc label` without a question, and outside Claude Code's sandbox, where `hc` cannot reach Herdr. It links the director skill as `~/.claude/skills/plato-director`. A skill of that name that is not PLATO's link stays as it is. Claude Code sessions that start after the install use the hooks and the skill. To remove them, run `./install.sh --hooks --remove`.
 
 To set a purpose yourself, press `cmd-e` (PURPOSE). [For agents and scripts](#for-agents-and-scripts) tells how the purpose and the step work, and how another agent or a script can set them.
 
@@ -199,9 +199,9 @@ The route is the line of spaces on the left. Each space is a square with its let
 
 A click on a space, a dot or a tab goes there. A click on a WAITING tag goes to the agent that waits in that space. Put the pointer on a dot, a tab's lamp or row, or a one-line row in TREE, and the readout at the bottom shows that tab. It shows the code and names, the purpose with its source, and the state with its time. When the pointer leaves, the readout comes back.
 
-A right-click on a space's square or name opens its menu: RENAME (`shift-F2`), LAB (`cmd-l`), SET DUE (`cmd-shift-e`) and SIGN-OFF (`cmd-alt-w`). A free letter offers SIGN-ON there instead. CLOSE UP (`cmd-u`) shows while the line has free letters. A right-click on a tab or a dot opens the tab's menu: GO (Enter), LOOK, RENAME TAB (`F2`) and SET PURPOSE (`cmd-e`). Each item does what its key does, and SIGN-OFF still shows its summary first. A small ▼ on the line points the way NEXT goes. NEXT1's way is drawn as a dashed line from your tab to its target, with the word NEXT1 on the target's row. The readout at the bottom names the targets of NEXT, BACK, NEXT1 and BACK1.
+A right-click on a space's square or name opens its menu: RENAME (`shift-F2`), LAB (`cmd-l`), SET DUE (`cmd-shift-e`) and SIGN-OFF (`cmd-alt-w`). A free letter offers SIGN-ON there instead. CLOSE UP (`cmd-u`) shows while the line has free letters. A right-click on a tab or a dot opens the tab's menu: GO (Enter), LOOK, RENAME TAB (`F2`), SET PURPOSE (`cmd-e`) and FOLDER (`cmd-o`). Each item does what its key does, and SIGN-OFF still shows its summary first. A small ▼ on the line points the way NEXT goes. NEXT1's way is drawn as a dashed line from your tab to its target, with the word NEXT1 on the target's row. The readout at the bottom names the targets of NEXT, BACK, NEXT1 and BACK1.
 
-TREE (`cmd-shift-t`) shows every space's tabs instead of dots, one line each, with the code, the program and the state. Press it again to go back. The route's title shows TREE in reverse video while it is on. A click on "TREE ⌘⇧T" or "AGENDA ⌘⇧A" in the title does the same as the key.
+TREE (`cmd-shift-t`) shows every space's tabs instead of dots, one line each, with the code, the program and the state. Press it again to go back. The route's title shows TREE in reverse video while it is on. A click on "TREE ⌘⇧T" or "REVIEW ⌘⇧R" in the title does the same as the key.
 
 ### Moving
 
@@ -231,7 +231,7 @@ The banner says "PLATO · space e compass · tab 1 api" on the left. On the righ
 
 SIGN-ON (`cmd-n`) opens a new space. Type a name, then press NEXT. SIGN-ON shows the letter the space takes, which is the first free letter. → puts the space at the end of the line instead. The folder is optional. Type it as `~/…`, `/…` or a path in your home folder. Or click "choose…" or press `cmd-o`, and pick it in the system folder picker. PLATO does not look for a folder on its own. With no folder, the space starts in your home folder. The due date is also optional (`fri`, `27`, `11/27`, `+5`). Tab, ↓ and ↑ move between the fields.
 
-SET DUE (`cmd-shift-e`) sets or changes the due date of the space you are in. In the agenda, it acts on the space under the cursor. A right-click on a space offers it too. Type the date in the same forms as in SIGN-ON, and the line under it shows the day it means. Enter saves, and a blank line clears the date. Esc cancels.
+SET DUE (`cmd-shift-e`) sets or changes the due date of the space you are in. A right-click on a space offers it too. Type the date in the same forms as in SIGN-ON, and the line under it shows the day it means. Enter saves, and a blank line clears the date. Esc cancels.
 
 SIGN-OFF (`cmd-alt-w`) closes the current space. It shows a summary first: the time open, the tabs, the due date, and what happens to the line. Only NEXT closes the space. NEXT1 also closes it and goes to the agent that waits for you. BACK keeps it open. A space in the middle leaves a free letter, so the other spaces keep theirs. On SIGN-OFF, `U` closes up the line instead and gives the later spaces new letters.
 
@@ -253,71 +253,100 @@ TODAY shows who waited on you today, and for how long:
 - The response line says how many waits you answered today, with the typical wait and the longest. An example is "6 waits answered · typical 3m · longest 21m at d2".
 - If a space has a due date, the due list shows it.
 
-A click on a row's letter or totals goes to that space, and a click on a wait box goes to the tab that waited. PLATO records the day while the PLATO layout is shown, in every view: with the agenda open and in FOCUS too. TODAY, the agenda, LOOK and JUMP read the record.
+A click on a row's letter or totals goes to that space, and a click on a wait box goes to the tab that waited. PLATO records the day while the PLATO layout is shown, in every view: with REVIEW open and in FOCUS too. TODAY, REVIEW, LOOK and JUMP read the record.
+
+While REVIEW is open, DUE and RUNNING take the place of TODAY and FILES. DUE lists the spaces with a due date, soonest first. RUNNING lists the agents that work now, longest first, each with your purpose, how long it has run and its progress, such as `3/7`. Its last line counts the idle agents. Both always show now, whatever day REVIEW shows.
 
 FILES shows the folder tree of the project you are in, which is the git root of the focused terminal's folder. A click on a folder opens it. A click on a file shows it in a viewer pane.
 
-### The agenda
+### REVIEW
 
-The agenda (`cmd-shift-a`) shows your spaces over time, over the route and the terminal. It has two views, TODAY and WEEK. Tab switches between them, and so does a click on TODAY or WEEK in its header.
+REVIEW (`cmd-shift-r`) is THE PLATO REVIEW, the review of your day. It covers the route and the terminal, and it answers one question: what did each space get done? Press `cmd-shift-r` again, Esc or `ctrl-g` to close it. `cmd-k r` opens it too.
 
-TODAY gives each space a column. Its head is a large letter in a circle with the space name. Under the name are the due date, the time its agents ran today with your time there, and its last activity. The due date shows only when the space has one. A space with less than a minute of activity today shows only a QUIET tag. The space you are in has a filled circle and its name in reverse video. Under the head, a box shows today's hours from top to bottom, from the hour of the first session to now:
+Before 12:00, REVIEW opens on the last day before today that has a record. From 12:00, it opens on today so far.
 
-- A filled block marks the time an agent there ran.
-- A hollow block with the word WAIT marks the time an agent waited on you.
-- A thin bright bar at the left edge is your time in that space.
-- A dim band marks time with no record: Herdr was closed, another layout was shown, or there is no day file yet. This time is the same for every space, so only the first column says "not recorded".
-- A dashed line at the bottom is now.
+REVIEW has two pages, DAY and COMMENTS. It opens on DAY. The title line names the day and the two pages. The name COMMENTS shows how many comments the day has, for example `COMMENTS 4`.
 
-The space's tabs hang under the box, each with its lamp, code and name. The tab you are at is in reverse video, `→` marks where NEXT goes, and `▲` marks where NEXT1 goes. A free letter keeps a dashed column, so no other column moves. When not all spaces fit, the header shows `◀ 2 more` or `1 more ▶`. Under the columns, one line gives the day's totals.
+Keys in REVIEW:
 
-WEEK gives each space a row, with a cell for each of the four days before today, today, and the four days after. A past cell has a bar for the time the agents ran and a thin bar for your time, with the time in words. A full bar is four hours. A dot is a day with no activity. The future cells are dashed, and "◆ DUE" marks the due date. At the right end are the week's times and the last day with activity. A space with no activity today or yesterday has a QUIET tag. Under the rows, one line gives the week's totals and its busiest day.
+- Tab and shift-Tab switch between DAY and COMMENTS. A click on a page name does the same.
+- ↑ and ↓ pick a result on DAY, or a comment on COMMENTS.
+- The Space bar opens LOOK for the picked tab (see below).
+- Enter goes to the picked tab.
+- ← and → show the day before or after. PLATO keeps 60 days.
+- `c` copies the note.
+- `cmd-j` opens JUMP over REVIEW.
+- Esc, `ctrl-g` or `cmd-shift-r` closes REVIEW. Any move closes it first.
 
-![WEEK: one row per space. Each day has a bar for the time the agents ran and your time under it. The future days are dashed, with a DUE mark. The week's times are at the right.](previews/agenda-week.png)
+The key line under the page shows these keys, and a click on a key does what the key does. SIGN-OFF, LAB, PURPOSE and DUE act on the tab you are at, not on the pick.
 
-While the agenda is open, the right column shows the due dates, soonest first. Press `cmd-shift-e` to set the due date of the space under the cursor. Under them are the agent that ran longest and the agent that was idle longest.
+#### DAY
 
-"Your time" is the time a tab of that space had the focus while Herdr was open. The agenda counts a letter's time only since its space took the letter. A renamed space keeps its history, and a letter that changed space does not mix two projects.
+The DIRECTOR line comes first. It shows the first sentence of the day's note on one line. Without a note, it reads `no note today`. A click on the line, or Tab, shows the whole note on COMMENTS.
 
-Keys in the agenda:
+RESULTS lists each tab that got a result that day, newest result first. An entry looks like this:
 
-- Tab switches TODAY and WEEK.
-- The arrows move the ▶ cursor, and Enter goes to the tab under it. In WEEK, up and down move between spaces.
-- The Space bar opens LOOK for the tab under the cursor (see below). In WEEK, that is the space's first tab.
-- `cmd-j` opens JUMP over the agenda, to find a tab by its code, name, purpose or folder.
-- A click on a tab goes there. A right-click on a column head, a tab or a WEEK row opens its menu. In WEEK, a click moves the cursor to a row, and a double click goes there. While the pointer is on a tab, the line under the columns shows its details.
-- LAB, SIGN-OFF and SET DUE act on the space under the cursor. Move to a free letter and press Enter to sign on there.
-- Esc or `cmd-shift-a` closes the agenda. Any move closes it first.
+```
+▶ a1 Rate-limit the public API
+  ✓ fixed burst overflow · todo 6/6 · 2 commits   ◷ here 2h12 · waited 29m
+  ✎ Limits now apply per key. Load test passes at 2x traffic.
+```
 
-Under the view, one line shows the keys for where the cursor is: move, go, look and sign-off. The keyset at the bottom of the window shows the other keys, and the tab rows mark where NEXT and NEXT1 go.
+The first line is the tab's code and its purpose. The second line is the latest result, then the todo progress, the commits and your time at the tab. ✓ marks a result, and ✕ marks a task that was dropped. The third line is the agent's latest report, cut to one line. The picked entry, marked ▶, shows the whole report. A tab you closed and opened again with the same purpose shows once.
+
+Next to RESULTS:
+
+- DONE counts the day's results by verb, with a bar for each, such as `fixed 4` and `shipped 2`.
+- OPEN lists the tabs whose purpose has no result yet, with the age of the purpose. A tab with commits but no purpose shows as `(no purpose)`.
+- HOW IT WENT shows your sessions, your tab switches per hour, how long agents waited on you, and how many questions they asked.
+
+TIMELINE, at the bottom, has one row for each space across the day. A shaded bar shows where you were, and the number in it is the tab. A thin line shows where an agent worked, and an orange mark shows where an agent waited on you. ✓ marks each result, and `✓2` means two results close together. A hatched strip above the rows marks quick switching between tabs, with a count such as `×14`. On today's page, a bright line marks now.
+
+TIMELINE follows your pick in RESULTS. The picked tab's bars have a box around them, and the other bars dim. A click on a bar picks its result.
+
+![REVIEW's DAY page for Wed 18 Nov, with COMMENTS 4 in the title line. Under it, the DIRECTOR line gives the note's first sentence: most of the day went to small fixes, and the migration plan waited two hours. RESULTS lists the tabs with a result, newest result first, with g1 "Review the API docs pull request" picked. Each entry shows its result, such as ✓ fixed burst overflow with todo 6/6, and one line of its report. c1 shows ✕ dropped shared cache layer. On the right, DONE has a bar for each verb, OPEN lists d2, and HOW IT WENT gives the sessions, switches, longest hold and waits. TIMELINE fills the lower half with rows a to g, and g1's bar has a box around it.](previews/review.png)
+
+#### COMMENTS
+
+COMMENTS starts with the DIRECTOR'S NOTE, the day's note in full. Without one, this part is one dim line. Under it, COMMENTS lists every comment of the day, newest first, with its tab and its time. A comment is an agent's observation about how you work with it.
+
+![REVIEW's COMMENTS page for the same day. DIRECTOR'S NOTE comes first, in full, with its time and the mark shareable. COMMENTS lists four comments, newest first, each in a box with its tab and time. The picked one, from f1, says that giving the budget and the data size first let the agent rule out two choices in minutes. The others name a plan that waited two hours for an answer, a goal that changed halfway, and the same test command approved four times.](previews/comments.png)
+
+#### Where the numbers come from
+
+Code counts every number from the day record, the tab labels and `git log`. No model writes or estimates a number. PLATO never keeps your prompts. Only a commit by the repository's own `user.email` counts.
+
+A badge in the title line says what REVIEW knows. `FACTS ONLY` means that no agent posted that day. `FACTS + 9 POSTS` means that agents posted nine pieces. If a source is missing, a line under the title names it, because a missing source never shows as zero. A day with no record says so and gives the reason, for example "PLATO was not running".
+
+A past day shows that day's own values. REVIEW reads the record only while it is open.
+
+To fill REVIEW with reports, comments and a note, agents use `plato-post` (see [For agents and scripts](#for-agents-and-scripts)). In Claude Code, `/plato-director` writes the note. REVIEW works without them.
 
 ### LOOK
 
-LOOK shows a tab's details before you go there. Press the Space bar in the agenda, or right-click a tab on the route, an agenda card or a SIGNALS row and choose LOOK. The card shows the code, space and tab, the program, the state with its time, and whether NEXT or NEXT1 goes there. Under that are the purpose in full with where it came from, the first prompt when it is different, the last prompt you sent and when, the folder, the space's tabs and due date, today's run time, and running sub-agents.
+LOOK shows a tab's details before you go there. Press the Space bar in REVIEW, or right-click a tab on the route or a SIGNALS row and choose LOOK. The card shows the code, space and tab, the program, the state with its time, and whether NEXT or NEXT1 goes there. Under that are the purpose in full with where it came from, the first prompt when it is different, the last prompt you sent and when, the folder, the space's tabs and due date, today's run time, and running sub-agents.
 
 In LOOK, Enter goes to the tab. The arrow keys show the next card: along the line, or from SIGNALS through the waiting agents in NEXT1 order. The Space bar or Esc closes LOOK. `cmd-e` closes it and sets that tab's purpose.
 
 ### JUMP, FOCUS, HELP and the keyset
 
-JUMP (`cmd-j`) finds a tab and goes there. It opens a dialog that lists every tab. The agents that need you come first, in NEXT1 order, then the working agents, then the idle tabs in line order. Type part of a tab's name, space, purpose or folder to narrow the list. Each word must match, in any order, and the matched letters light up. A code such as `c3`, or a space's letter, puts that tab first, so a code and Enter go there at once. Beside the list is the selected tab's LOOK card. The arrows, or `ctrl-n` and `ctrl-p`, move. Tab shows one group at a time. Enter or a double click goes to the tab. Esc, `ctrl-g` or `cmd-j` again closes JUMP. In the agenda, JUMP opens over the agenda, and closing it puts you back in the agenda.
+JUMP (`cmd-j`) finds a tab and goes there. It opens a dialog that lists every tab. The agents that need you come first, in NEXT1 order, then the working agents, then the idle tabs in line order. Type part of a tab's name, space, purpose or folder to narrow the list. Each word must match, in any order, and the matched letters light up. A code such as `c3`, or a space's letter, puts that tab first, so a code and Enter go there at once. Beside the list is the selected tab's LOOK card. The arrows, or `ctrl-n` and `ctrl-p`, move. Tab shows one group at a time. Enter or a double click goes to the tab. Esc, `ctrl-g` or `cmd-j` again closes JUMP. In REVIEW, JUMP opens over the page, and closing it puts you back in REVIEW.
 
-![JUMP with "rate" typed: two of 19 tabs match, f2 that needs you and f1 that is working, each with "rate" lit in its purpose. The chips count the matches in each group. Beside the list is the LOOK card of f2, the selected row.](previews/jump.png)
+![JUMP with "rate" typed: two of 19 tabs match, f2 that needs you and f1 that is working, each with "rate" lit in its purpose. The chips count the matches in each group. Beside the list is the LOOK card of f2.](previews/jump.png)
 
-FOCUS (`cmd-shift-f`) hides the right column and narrows the route to a column of lettered squares. The current space is filled. A space with an agent that waits for you pulses and has a WAIT tag. If an agent in another tab needs you, a flashing SIGNAL line shows above the keys. A click on the line does what NEXT1 does, and a click on a WAIT tag goes to the agent in that space. Press FOCUS again to bring the columns back. NEXT, BACK, NEXT1 and the agenda keep working.
+FOCUS (`cmd-shift-f`) hides the right column and narrows the route to a column of lettered squares. The current space is filled. A space with an agent that waits for you pulses and has a WAIT tag. If an agent in another tab needs you, a flashing SIGNAL line shows above the keys. A click on the line does what NEXT1 does, and a click on a WAIT tag goes to the agent in that space. Press FOCUS again to bring the columns back. NEXT, BACK, NEXT1 and REVIEW keep working.
 
-HELP (`cmd-/`) has two screens. KEYS lists every PLATO key and one line about the mouse, Herdr's own picker (`cmd-p`) and its command palette (TERM, `cmd-shift-p`). It also lists the rename keys: `shift-F2` for a space, which keeps its letter, and `F2` for a tab. WORDS explains the letter, the code, the free letter, WAITING, the route's marks, SIGNAL, the agenda, JUMP and the purpose. → or Enter shows the next screen, ← the one before, and 1 or 2 goes straight there.
+HELP (`cmd-/`) has two screens. KEYS lists every PLATO key and one line about the mouse, Herdr's own picker (`cmd-p`) and its command palette (TERM, `cmd-shift-p`). It also lists the rename keys: `shift-F2` for a space, which keeps its letter, and `F2` for a tab. WORDS explains the letter, the code, the free letter, WAITING, the route's marks, SIGNAL, REVIEW, JUMP and the purpose. → or Enter shows the next screen, ← the one before, and 1 or 2 goes straight there.
 
-The keyset along the bottom shows NEXT, BACK, NEXT1, BACK1, JUMP, AGENDA, FOCUS, LAB, TERM and HELP as boxed keys, each with its shortcut: the moves, then the views, then the rest. The route's title also shows the TREE and AGENDA keys.
+The keyset along the bottom shows NEXT, BACK, NEXT1, BACK1, JUMP, REVIEW, FOCUS, LAB, TERM and HELP as boxed keys, each with its shortcut: the moves, then the views, then the rest. The route's title also shows the TREE and REVIEW keys.
 
 ### The ⌘K panel (KEYS)
 
 KEYS gives every PLATO command a short, plain letter after `cmd-k`. Press `cmd-k`, release it, then press one letter. For example, `cmd-k d` sets the due date, and `cmd-k j` opens JUMP. If you press the letter within half a second, nothing shows. If you pause, a panel at the bottom of the window lists the letters in four groups: MOVE, VIEW, SPACE AND TAB, and MORE. Each row shows the letter, the command and its direct key. A click on a row runs it.
 
-The letters are easy to remember: `n` NEXT, `p` BACK, `a` AGENDA, `d` DUE, `k` SIGN-OFF, `x` TERM and `h` HELP. A capital letter is the "1" move: `N` is NEXT1 and `P` is BACK1. HELP also takes `?`. `z` is ZOOM and `r` is RENAME TAB. The panel takes plain letters only. A key typed with `cmd` held is never a panel key. `ctrl-g` or Esc closes the panel, and nothing runs. A letter with no command also closes it, and the banner says "⌘K q is undefined" for two seconds.
+The letters are easy to remember: `n` NEXT, `p` BACK, `r` REVIEW, `d` DUE, `k` SIGN-OFF, `x` TERM and `h` HELP. Capital `N` is NEXT1 and capital `P` is BACK1. HELP also takes `?`. `z` is ZOOM and capital `R` is RENAME TAB. The panel takes plain letters only. A key typed with `cmd` held is never a panel key. `ctrl-g` or Esc closes the panel, and nothing runs. A letter with no command also closes it, and the banner says "⌘K q is undefined" for two seconds.
 
 ![The KEYS panel at the bottom of the window, after a pause: four groups of letters, MOVE, VIEW, SPACE AND TAB and MORE. Each row shows the letter, the command and its direct key. The header says that ctrl-g or Esc cancels.](previews/keys.png)
-
-In the agenda, `e`, `d`, `l`, `k` and `r` act on the space or tab under the cursor, as their direct keys do there. The panel's header names the cursor, and those rows show their target.
 
 ## For agents and scripts
 
@@ -357,9 +386,58 @@ Set `plato.step_at` with each step. A step older than `plato.last_at`, the time 
 hc label <terminal> "plato.step=reading the diff" "plato.step_at=$(date +%s)"
 ```
 
+### Session and result labels
+
+REVIEW counts sessions and results from four more labels on a terminal. The Claude Code hooks set them, and any other agent can write them.
+
+| Label | What it holds | Example |
+| --- | --- | --- |
+| `plato.session` | The id of the agent's session. Each different value on a terminal is one session. | `7f3c9a1e` |
+| `plato.session_how` | How the session began: `startup`, `resume`, `clear` or `compact`. | `resume` |
+| `plato.done` | The latest result, in five words or fewer. The first word is a past-tense verb: researched, explored, explained, brainstormed, designed, planned, decided, built, fixed, refactored, configured, tested, diagnosed, reviewed, shipped, documented, drafted or dropped. Another verb counts as "other". | `fixed login timeout` |
+| `plato.done_at` | When the result was set, in unix seconds. Each different value is one result, so the same words twice count twice. | `1795474442` |
+
+The agent sets a result only at a milestone, because REVIEW counts each result. A milestone is a point that you would want to see in a summary of the day. The hook gives examples: a finished phase or plan step, a pull request opened or merged, a deploy or another change outside the repo, a ticket that changes status, a research question answered with a finding, a decision, a document drafted or finished, or a goal that you call done. For other work, the agent uses its judgment. Small steps toward the same milestone set none. For example:
+
+```sh
+hc label <terminal> "plato.done=fixed login timeout" "plato.done_at=$(date +%s)"
+```
+
+### Posting to REVIEW
+
+`plato-post` sends one piece to REVIEW. It is a shell script. `./install.sh --hooks` links it as `~/.local/bin/plato-post`.
+
+```sh
+plato-post report "Stopped at test_backfill_order. Steps 6 to 8 wait on it."
+plato-post comment "You changed the goal twice in this session. Each change undid an hour of work. Writing the goal down first would help."
+echo "Monday was a finishing day. ..." | plato-post note
+plato-post --help
+```
+
+There are three kinds:
+
+| Kind | What it holds | Limit |
+| --- | --- | --- |
+| `report` | Facts about the sender's own work. | 280 characters |
+| `comment` | An agent's observation about how you work with it. | 400 characters |
+| `note` | The director's note, the one piece you can pass on as it is. | 1500 characters |
+
+If the text is longer than its limit, `plato-post` refuses it with a message and does not cut it. Without text on the command line, it reads standard input. It reads `HC_TERMINAL_ID` to name the sender's terminal. Without it, the post shows "no tab". The option `--day YYYY-MM-DD` files a post for another day, so a director that runs early can write about yesterday.
+
+Each post is one file, `plato-data/posts/YYYY-MM-DD/<unix seconds>-<terminal or none>-<kind>.md`, in PLATO's data folder (`~/.config/herdr-app` unless `HERDR_APP_HOME` says otherwise). It has three header lines (`kind`, `terminal` and `time`), an empty line and the text. `plato-post` prints the path, or an error and a non-zero exit. PLATO deletes post folders with the day files after 60 days. REVIEW shows the latest report of each tab, every comment of the day and the latest note. The other posts stay in the folder.
+
+The posting rules, which the Claude Code hook gives each session:
+
+- A report: each time the agent sets `plato.done`, at a milestone, it sends one report of one or two sentences with the facts behind the result.
+- A comment: comments are about how you and the agent work together, not about the work. When an agent sees friction repeat in one session, or a habit that clearly saved time, it writes a comment. Examples are the same approval again and again, the same correction repeated or a file or status it had to search for each time. A comment starts with "You" or "Your", gives one fact, and ends with one lasting change that would remove the friction: a permission rule, a line in CLAUDE.md or AGENTS.md, a skill, a script, or a change in how files, handoffs or status files are organized. If the agent cannot name such a change, it writes no comment. Exploring in conversation is a way of working, so a comment never asks for more detail at the start. A comment is about what you did, never about who you are. It is honest, even when it is unflattering, and never praise for its own sake. The state of the work, risks and advice about PLATO go in the agent's reply and its report. Most sessions end with no comment. A terminal sends at most one comment an hour, and `plato-post` refuses a sooner one or one that does not start with "You" or "Your".
+- A note: only an agent that you start as the director writes one, for example with `/plato-director`. Other agents never do.
+- You can always ask an agent to post, for example "post a report about the timezone choice". The one-hour limit and the rules for comments still apply.
+
+For an agent other than Claude Code, add these rules to its global instructions by hand. PLATO does not edit those files.
+
 ### What `--hooks` adds to the settings
 
-`./install.sh --hooks` adds the permission rule `Bash(hc label:*)`, so Claude sets its purpose without a question. It also adds the sandbox exclusion `hc label:*`, which runs `hc label` outside the sandbox. The exclusion applies only when `hc label` runs alone, with no pipe or redirect. A second run of the script adds nothing.
+`./install.sh --hooks` adds the permission rule `Bash(hc label:*)`, so Claude sets its purpose without a question. It also adds the sandbox exclusion `hc label:*`, which runs `hc label` outside the sandbox. If `hc label` runs alone, with no pipe or redirect, the exclusion applies. It adds the same two entries for `plato-post`: the permission rule `Bash(plato-post:*)` and the sandbox exclusion `plato-post:*`. It links two files outside the settings: `~/.local/bin/plato-post` and the director skill, `~/.claude/skills/plato-director`. A second run of the script adds nothing.
 
 ## Work on PLATO
 

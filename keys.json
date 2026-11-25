@@ -13,12 +13,13 @@
     "cmd-n": "plato.sign-on",
     "cmd-alt-w": "plato.sign-off",
     "cmd-u": "plato.close-up",
-    "cmd-shift-a": "plato.agenda",
+    "cmd-shift-r": "plato.review",
     "cmd-j": "plato.jump",
     "cmd-k": "plato.keys",
     "cmd-shift-t": "plato.tree",
     "cmd-shift-f": "plato.focus",
     "cmd-e": "plato.purpose",
-    "cmd-shift-e": "plato.due"
+    "cmd-shift-e": "plato.due",
+    "cmd-o": "plato.folder"
   }
 }

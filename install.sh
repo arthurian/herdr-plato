@@ -2,8 +2,10 @@
 # Copy the PLATO layout, themes and mod (plato) into Herdr's folder, and add the layout:plato
 # keys to keys.json. Existing PLATO files are kept unless --force. The plato-* mods of earlier
 # versions are now roles of plato, so --force removes them.
-# --hooks adds PLATO's Claude Code hooks (last prompt, purpose, step), the rule Bash(hc label:*) and the sandbox exclusion
-# "hc label:*" to ~/.claude/settings.json (and nothing else). --hooks --remove takes them out again.
+# --hooks adds PLATO's Claude Code hooks (last prompt, purpose, step), the rules Bash(hc label:*) and Bash(plato-post:*)
+# and the sandbox exclusions "hc label:*" and "plato-post:*" to ~/.claude/settings.json, links bin/plato-post
+# as ~/.local/bin/plato-post, and links the director skill skills/plato-director as ~/.claude/skills/plato-director
+# (run by hand as /plato-director). --hooks --remove takes them out again.
 set -eu
 H="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 R="$(cd "$(dirname "$0")" && pwd)"
@@ -39,8 +41,30 @@ if [ "${1:-}" = "--hooks" ]; then
           | if .sandbox.excludedCommands == [] then del(.sandbox.excludedCommands) else . end
           | if .sandbox == {} then del(.sandbox) else . end
         else . end
+      | if any(.permissions.allow[]?; . == "Bash(plato-post:*)") then
+          .permissions.allow -= ["Bash(plato-post:*)"]
+          | if .permissions.allow == [] then del(.permissions.allow) else . end
+          | if .permissions == {} then del(.permissions) else . end
+        else . end
+      | if any(.sandbox.excludedCommands[]?; . == "plato-post:*") then
+          .sandbox.excludedCommands -= ["plato-post:*"]
+          | if .sandbox.excludedCommands == [] then del(.sandbox.excludedCommands) else . end
+          | if .sandbox == {} then del(.sandbox) else . end
+        else . end
     ' "$S" >"$S.tmp"
     cat "$S.tmp" >"$S" && rm "$S.tmp"
+    # The link, only if it points at this checkout's plato-post.
+    L="$HOME/.local/bin/plato-post"
+    if [ -L "$L" ]; then
+      T="$(readlink "$L")"
+      if [ "$T" = "$R/bin/plato-post" ] || [ "$T" = "$(cd "$R" && pwd -P)/bin/plato-post" ]; then rm "$L"; fi
+    fi
+    # The director skill's link, only if it points at this checkout's skill.
+    K="$HOME/.claude/skills/plato-director"
+    if [ -L "$K" ]; then
+      T="$(readlink "$K")"
+      if [ "$T" = "$R/skills/plato-director" ] || [ "$T" = "$(cd "$R" && pwd -P)/skills/plato-director" ]; then rm "$K"; fi
+    fi
     echo "Removed PLATO's hooks from $S."
   else
     jq --arg d1 "$D1" --arg d2 "$D2" '
@@ -60,9 +84,22 @@ if [ "${1:-}" = "--hooks" ]; then
       | if any(.permissions.allow[]?; . == "Bash(hc label:*)") then . else .permissions.allow += ["Bash(hc label:*)"] end
       # Claude Code runs Bash in a sandbox, and there hc cannot reach Herdr.
       | if any(.sandbox.excludedCommands[]?; . == "hc label:*") then . else .sandbox.excludedCommands += ["hc label:*"] end
+      | if any(.permissions.allow[]?; . == "Bash(plato-post:*)") then . else .permissions.allow += ["Bash(plato-post:*)"] end
+      | if any(.sandbox.excludedCommands[]?; . == "plato-post:*") then . else .sandbox.excludedCommands += ["plato-post:*"] end
     ' "$S" >"$S.tmp"
     cat "$S.tmp" >"$S" && rm "$S.tmp"
-    echo "Added PLATO's hooks to $S. Start a new Claude Code session, or review them in /hooks."
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$R/bin/plato-post" "$HOME/.local/bin/plato-post"
+    # The director skill: a link, so it follows this checkout. A folder of the same name that is
+    # not a link is someone's own skill: leave it.
+    K="$HOME/.claude/skills/plato-director"
+    mkdir -p "$HOME/.claude/skills"
+    if [ -e "$K" ] && [ ! -L "$K" ]; then
+      echo "Left $K as it is: it is not a link to PLATO's director skill." >&2
+    else
+      ln -sfn "$R/skills/plato-director" "$K"
+    fi
+    echo "Added PLATO's hooks and the /plato-director skill to $S and $HOME/.claude/skills. Start a new Claude Code session, or review them in /hooks."
   fi
   exit 0
 fi

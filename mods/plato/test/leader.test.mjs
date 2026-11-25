@@ -10,7 +10,8 @@ test("leader: letters", () => {
   assert.equal(runs(leaderKey("j", {})), "jump");
   assert.equal(runs(leaderKey("s", {})), "signon");
   assert.equal(runs(leaderKey("z", {})), "pane.zoom");
-  assert.equal(runs(leaderKey("r", {})), "renametab");
+  assert.equal(runs(leaderKey("r", {})), "review");
+  assert.equal(runs(leaderKey("R", {})), "renametab");
   assert.equal(runs(leaderKey("h", {})), "help");
   assert.equal(PANEL_MS, 500);
 });
@@ -21,7 +22,8 @@ test("leader: shift keys", () => {
   assert.equal(runs(leaderKey("p", { shift: true })), "back1");
   assert.equal(runs(leaderKey("n", {})), "next");
   assert.equal(runs(leaderKey("p", {})), "back");
-  assert.deepEqual(leaderKey("o", {}), { undefined: "o" });
+  assert.equal(runs(leaderKey("o", {})), "folder");
+  assert.deepEqual(leaderKey("q", {}), { undefined: "q" });
   assert.equal(runs(leaderKey("/", { shift: true })), "help");
   assert.equal(runs(leaderKey("?", {})), "help");
   assert.equal(runs(leaderKey("?", { shift: true })), "help");
@@ -66,13 +68,8 @@ test("leader: the groups in the panel's order", () => {
   const g = leaderGroups();
   assert.deepEqual(g.map((x) => x.title), ["MOVE", "VIEW", "SPACE AND TAB", "MORE"]);
   assert.deepEqual(g[0].rows.map((r) => r.key), ["n", "p", "N", "P", "j"]);
-  assert.deepEqual(g[2].rows.map((r) => r.key), ["s", "l", "e", "d", "k", "u", "r"]);
-  assert.deepEqual(g[3].rows.map((r) => r.name), ["TERM", "HELP", "CANCEL"]);
-});
-
-test("leader: the rows that act on the agenda's cursor", () => {
-  const on = Object.fromEntries(LEADER.filter((r) => r.on).map((r) => [r.key, r.on]));
-  assert.deepEqual(on, { l: "space", e: "tab", d: "space", k: "space", r: "tab" });
+  assert.deepEqual(g[2].rows.map((r) => r.key), ["s", "l", "e", "d", "k", "u", "R"]);
+  assert.deepEqual(g[3].rows.map((r) => r.name), ["FOLDER", "TERM", "HELP", "CANCEL"]);
 });
 
 test("leader: a chord Herdr binds passes to Herdr, with no notice", () => {
@@ -92,9 +89,16 @@ test("leader: chordOf reads keys.json chords and key events the same way", () =>
   assert.notEqual(chordOf("cmd-k"), chordOf("k", {}));
 });
 
-test("leader: RENAME TAB goes to the route, which renames the agenda cursor's tab", () => {
-  const r = leaderKey("r", {}).run;
+test("leader: RENAME TAB goes to the route, which renames the tab you are at", () => {
+  const r = leaderKey("R", {}).run;
   assert.equal(r.cmd, "renametab");
   assert.equal(commandFor("renametab"), "plato.rename-tab");
   assert.equal(ownerOf("rename-tab"), "route");
+});
+
+test("leader: r runs REVIEW, R runs RENAME TAB, and no two rows share a key", () => {
+  assert.equal(LEADER.find((r) => r.key === "r").cmd, "review");
+  assert.equal(LEADER.find((r) => r.key === "R").cmd, "renametab");
+  const keys = LEADER.flatMap((r) => [r.key, r.also]).filter(Boolean);
+  assert.equal(new Set(keys).size, keys.length);
 });

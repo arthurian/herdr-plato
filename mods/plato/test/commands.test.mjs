@@ -57,7 +57,7 @@ test("commands: every PLATO key (the keyset and HELP) runs a command a role take
 });
 
 test("commandName and ownerOf: the text after : or a space is not part of the name", () => {
-  assert.equal(commandName("type:c3<enter>"), "type");
+  assert.equal(commandName("sign-on:<path>"), "sign-on");
   assert.equal(commandName("sign-on /tmp/x"), "sign-on");
   assert.equal(ownerOf("help:words"), "keyset");
   assert.equal(ownerOf("sign-on:/tmp/x"), "route");
@@ -65,4 +65,11 @@ test("commandName and ownerOf: the text after : or a space is not part of the na
   assert.equal(ownerOf("keys"), "keyset");
   assert.equal(ownerOf("go:t3v"), "route");
   assert.equal(ownerOf("nope"), null);
+});
+
+test("commands: review is the route's command, paper is gone", () => {
+  assert.equal(ownerOf("paper"), null);
+  assert.equal(ownerOf("review"), "route");
+  assert.equal(ownerOf("review:2026-11-20 comments"), "route");
+  assert.equal(commandFor("review"), "plato.review");
 });

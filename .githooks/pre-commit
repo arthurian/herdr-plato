@@ -11,7 +11,7 @@ fi
 npm test --silent >/dev/null 2>&1 || { echo "pre-commit: tests failed. Run npm test to see why." >&2; exit 1; }
 npm run lint --silent || { echo "pre-commit: ESLint found problems (above)." >&2; exit 1; }
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck install.sh sync.sh hooks/*.sh .githooks/pre-commit || { echo "pre-commit: shellcheck found problems (above)." >&2; exit 1; }
+  shellcheck install.sh sync.sh hooks/*.sh bin/plato-post .githooks/pre-commit || { echo "pre-commit: shellcheck found problems (above)." >&2; exit 1; }
 else
   echo "pre-commit: shellcheck is not installed, so the shell scripts were not checked." >&2
 fi

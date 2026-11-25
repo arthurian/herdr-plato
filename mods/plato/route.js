@@ -3,37 +3,31 @@
 // the others show a dot per stop. NEXT1 is drawn before you press it, as a dashed
 // yellow run; NEXT and BACK are named in the readout.
 // Owns the letters (only this role writes plato.line) and the moves.
-//   props { role: "route", mode: "line" | "agenda" }: the narrow line, or the agenda (agendaview.js). The
-//   layout keeps both in stacks; "agenda" (cmd-shift-a) swaps them with layout.select: the line
-//   copy opens the agenda, the agenda copy folds it back. While open, shared "plato.agenda" is
-//   { at } and the agenda copy takes the keyboard.
-//   commands: next, next1, back; agenda; jump, jump:<text> (open JUMP, jumppage.js, as a dialog, with that text typed); type:<keys> (into the open agenda; <down>, <space>: named keys); sign-on, sign-off (open the sign role as a dialog, or close
-//   it), close-up (drop free slots and reletter); lab (plato.lab sends it while the agenda is
-//   open: a terminal on the space under the cursor). In the agenda, sign-off is for the
-//   space under the cursor, and the Space bar opens LOOK for the stop under it (lookpage.js); goto:<code> goes to a stop (LOOK's Enter). While a sign page is open, NEXT, BACK,
+//   props { role: "route", mode: "line" }: the narrow line.
+//   "review" (cmd-shift-r) swaps the line for REVIEW (the review role, review.js) with layout.select,
+//   and back. Herdr sends commands only to the copies it shows, so the line copy opens REVIEW and
+//   the route the review copy carries (mode "review", main.js) folds it. While open, shared
+//   "plato.review" is { at } and the review copy takes the keyboard; a move folds it first.
+//   commands: next, next1, back; review, review:<YYYY-MM-DD>[ day|comments] (open on that day and page); jump, jump:<text> (open JUMP, jumppage.js, as a dialog, with that text typed); sign-on, sign-off (open the sign role as a dialog, or close
+//   it), close-up (drop free slots and reletter); lab (the new-tab menu); goto:<code> goes to a stop (LOOK's Enter). While a sign page is open, NEXT, BACK,
 //   NEXT1 and close-up (its U) go to it through shared "plato.sign.key" (dialogs get no
 //   key commands).
 
 import { div, svg } from "gpui-kit";
-import { v_flex, h_flex, ScrollHandle } from "gpui-base";
-import { spaces, panes, agents, focused, machines, shared, setShared, run, setAgentOrder, checking, props, openOverlay, closeOverlay, terminals, appHome, readTextFile, watchFolder, window as appWindow, layout } from "herdr";
-import { letterColumns, signalRows } from "./overview.js";
-import { cursorAt, startCursor, weekDays, agendaCur } from "./agenda.js";
-import { spaceMenu, tabMenu, ALIVE_MS, liveRecord, moveHeld, keysGaveBack } from "./logic.js";
+import { v_flex, h_flex } from "gpui-base";
+import { spaces, panes, agents, focused, machines, shared, setShared, run, setAgentOrder, checking, openOverlay, closeOverlay, terminals, layout, exec, window } from "herdr";
+import { signalRows, hoverDetail, stateSince } from "./overview.js";
+import { spaceMenu, tabMenu, folderOpener, ALIVE_MS, liveRecord, moveHeld, findNode } from "./logic.js";
 import { toggleDialog, closeDialog, dialogOpen, aliveAt, markAlive, keyText } from "./keys.js";
-import { dayKey, parseDay, freshDay } from "./day.js";
-import * as agendaview from "./agendaview.js";
-import * as agendaweek from "./agendaweek.js";
 import { C, FONT, stateColor, stateWord, lit } from "./look.js";
 import {
   ROW, markY, reconcile, spaceMoves, stops, stopKey, currentStop, nextStop, next1Agent,
-  agentOrder, pushBack, backStop, prevStop, routeRows, next1Run, closeUp, closeUpStep, arrivalShown, labelOf,
+  agentOrder, pushBack, backStop, prevStop, routeRows, next1Run, closeUp, closeUpStep, arrivalShown, labelOf, purposeOf,
   waitingLetters, waitingIn, next1Words, next1Label, next1Arrow, nextMark, setDue,
 } from "./line.js";
 import { parseDueCommand } from "./sign.js";
-import { LINE, LINE_BACK, PENDING, SIGN_DIALOG, SIGN_KEY, CLOSEUP, AGENDA, ROUTE_TREE, ARRIVAL, LOOK, KEYS_BACK } from "./shared.js";
+import { LINE, LINE_BACK, PENDING, SIGN_DIALOG, SIGN_KEY, CLOSEUP, REVIEW, ROUTE_TREE, ARRIVAL, LOOK } from "./shared.js";
 
-const DATA = "plato-data";          // the day files (recorder.js), under the app home
 const LINE_X = 14;   // the main line
 const RUN_X = 236;    // the NEXT1 run's vertical
 const TEXT_X = 30;    // space names
@@ -55,33 +49,62 @@ function clock(ms) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/** Hovering el (a tab's dot, row or card) shows its detail in the readout while the pointer
+ *  is on it: r.hoverKey is the route view's own, so a hover changes no PLATO state and takes
+ *  no focus. */
+function hoverable(r, el, s) {
+  const key = stopKey(s);
+  return el.on_hover((on, cx) => {
+    if (on) r.hoverKey = key;
+    else if (r.hoverKey === key) r.hoverKey = null;
+    cx.notify();
+  });
+}
+
+/** The hovered tab, if it is still there, as hoverDetail words (perLine for its purpose). */
+function hovered(r, all, sp, now, perLine) {
+  const s = r.hoverKey ? all.find((x) => stopKey(x) === r.hoverKey) : null;
+  if (!s) return null;
+  const purpose = s.terminal ? purposeOf(terminals().find((x) => x.address === s.terminal)?.labels) : null;
+  return hoverDetail(s, purpose, stateSince(s, sp), now, perLine);
+}
+
+/** A hovered tab's detail in place of the route's readout: the code and names, the purpose
+ *  with its source, and the state with its time, on at most four lines like the readout. */
+function detailBlock(d) {
+  const last = d.purpose.length - 1;
+  return v_flex().gap(1).text_size(13).border_t(1).border_color(C.glow).pt(4).min_w(0)
+    .child(div().truncate().font_weight(700).text_color(C.bright).child(d.title))
+    .children(d.purpose.map((l, i) => (i < last ? div().truncate().child(l)
+      : h_flex().gap(8).min_w(0).when(l !== "", (el) => el.child(div().flex_initial().min_w(0).truncate().child(l)))
+        .child(div().flex_none().text_color(C.dim).child(d.source)))))
+    .when(!d.purpose.length, (el) => el.child(div().text_color(C.dim).child("no purpose")))
+    .child(div().truncate().text_color(stateColor(d.status)).child(`${d.program} · ${stateWord(d.status)}${d.time ? ` ${d.time}` : ""}`));
+}
+
+/** A right-click on el opens a menu of items (spaceMenu or tabMenu) at the pointer, as
+ *  Herdr's own tab menu does (r.openMenu). target names what the menu is for by its code or
+ *  letter. */
+function rightClick(r, el, items, target) {
+  return el.on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); r.openMenu(items, target); });
+}
+
+/** A tab's trigger: its right-click menu and its hover detail. */
+function tabTrigger(r, trigger, s) {
+  return hoverable(r, rightClick(r, trigger, tabMenu({ current: false }), { code: s.code }), s);
+}
+
 export default class Route {
-  init(_p, cx) {
+  init(p, cx) {
     this.movedFor = null;
-    this.agendaMode = (props()?.mode ?? "line") === "agenda";
-    this.cursor = null; // the agenda: { col, row }
-    this.h = cx.focus_handle();
-    this.agendaScroll = ScrollHandle.new(); // the agenda's rows, so the arrows can scroll it
-    if (this.agendaMode) {
-      // Take the keyboard when the agenda opens. layout.select shows this copy a moment
-      // after the line copy asks, so keep trying for a short while; a click also takes it.
-      if (!checking()) cx.timer.every(200, (cx) => this.claim(cx));
-      // The spaces' day words: today's day file (the banner writes it, recorder.js), read when the agenda
-      // opens and again only when the folder changes while it is open; never on a render.
-      this.day = { key: null, events: null, dirty: true };
-      this.agendaView = "today"; // the agenda's view: "today" (each space's hours) or "week"
-      this.past = new Map();  // the week's earlier day files: key -> events (each read once; they do not change)
-      if (!checking()) cx.spawn(async (cx) => {
-        for (;;) {
-          try { await watchFolder(`${appHome()}/${DATA}`); } catch { await cx.sleep(5000); continue; } // no folder yet: look again soon
-          this.day.dirty = true;
-          if (shared(AGENDA)) { await this.readDay(); cx.notify(); }
-        }
-      });
-    }
+    // The copy the review copy carries (main.js): it takes commands while REVIEW shows, and is not drawn.
+    this.reviewMode = p?.mode === "review";
+    if (this.reviewMode) return;
     // A sign page does not outlive a layout switch or a reload; forget a stale one, or
     // NEXT would keep going to it.
     if (!checking() && shared(SIGN_DIALOG)) setShared(SIGN_DIALOG, null);
+    // Nor does an open REVIEW that the layout no longer shows.
+    if (!checking() && shared(REVIEW) && findNode(layout(), "plato-main")?.active !== "review-view") setShared(REVIEW, null);
   }
 
   /** The sign dialog's record (SIGN-ON, SIGN-OFF, CLOSE UP, SET PURPOSE, SET DUE) while that
@@ -112,27 +135,21 @@ export default class Route {
     }
     // While LOOK, JUMP, HELP or a menu is open, a move waits: it never moves you behind a dialog.
     if (moveHeld(c, ["look", "jump", "help", "menu"].filter((n) => dialogOpen(n)))) return;
-    if (c === "agenda") return this.agendaMode ? this.fold() : this.open();
-    // JUMP: find a tab by its code, name, purpose or folder, as a dialog. The agenda copy opens
-    // it while the agenda is open (and takes the keyboard back when it closes), else the line copy.
+    // REVIEW opens or folds by what the layout shows, so a "plato.review" kept from before a restart
+    // cannot make the key fold a page that is not there.
+    if (c === "review") return this.reviewMode ? this.fold() : this.open();
+    // "review:<YYYY-MM-DD>[ day|comments]" opens REVIEW on that day and page (for scripts and screenshots).
+    const day = c.match(/^review:(\d{4}-\d{2}-\d{2})(?: (day|comments))?$/);
+    if (day) return this.open(day[1], day[2] ?? "day");
+    // JUMP: find a tab by its code, name, purpose or folder, as a dialog, from the line copy (also
+    // over REVIEW, which takes the keyboard back when it closes).
     // "jump:<text>" opens it with that text already typed (for scripts and screenshots).
     const jump = c.match(/^jump(?::(.*))?$/s);
     if (jump) {
-      if (this.agendaMode !== Boolean(shared(AGENDA))) return;
-      if (this.agendaMode) this.jumping = true;
       return toggleDialog("jump", { mod: "plato", props: { role: "jump", query: jump[1] ?? "" }, width: 1280, height: 640 });
     }
     // TREE: every space's stops on the route, or only the current space's again.
-    if (c === "tree") return this.agendaMode ? null : setShared(ROUTE_TREE, !shared(ROUTE_TREE));
-    // "type:c3" types into the open agenda as keys would (for scripts and checks); a key name in
-    // angle brackets is that key: "type:<down><space>".
-    const typed = c.match(/^type:(.*)$/);
-    if (typed) {
-      if (this.agendaMode) for (const [, name, ch] of typed[1].matchAll(/<(\w+)>|(.)/gu)) {
-        agendaview.key(this, name ? { key: name, key_char: name === "space" ? " " : null } : { key: ch, key_char: ch }, this.columns ?? []);
-      }
-      return;
-    }
+    if (c === "tree") return setShared(ROUTE_TREE, !shared(ROUTE_TREE));
     // "pick:<json>": an item picked in a right-click menu (the menu role).
     const pick = c.match(/^pick:(.*)$/s);
     if (pick) {
@@ -140,32 +157,26 @@ export default class Route {
       try { p = JSON.parse(pick[1]); } catch { return; }
       return this.menuPick(p.id, p.target ?? {});
     }
-    // RENAME TAB from the keys panel: in the agenda the tab under the cursor (as its right-click
-    // RENAME TAB), else the tab you are at, as F2.
-    if (c === "rename-tab") {
-      if (this.agendaMode !== Boolean(shared(AGENDA))) return;
-      if (!this.agendaMode) return run("tab.rename");
-      const stop = this.agendaAt().stop;
-      return stop ? run("tab.rename", { id: stop.tab }) : undefined;
-    }
+    // RENAME TAB from the keys panel: the tab you are at, as F2 (also over REVIEW).
+    if (c === "rename-tab") return run("tab.rename");
     if (c === "lab") return this.lab();
-    // SET PURPOSE (cmd-e): for the tab you are at, or in the agenda the card under the cursor.
+    // FOLDER (cmd-o): the folder of the tab you are at, in the file manager.
+    if (c === "folder") return this.openFolder(this.world().cur);
+    // SET PURPOSE (cmd-e): for the tab you are at.
     // While LOOK is open, SET PURPOSE is for the tab it shows: LOOK closes and the page opens.
     if (c === "purpose") {
       const look = this.lookOpen();
       if (look) {
         closeDialog("look");
-        this.looking = false;
         return this.openPurpose(this.world().all.find((s) => s.terminal === look.terminal));
       }
-      return this.openPurpose(this.agendaMode ? this.agendaAt().stop : this.world().cur);
+      return this.openPurpose(this.world().cur);
     }
-    // SET DUE (cmd-shift-e): for the space you are in, or in the agenda the space under the
-    // cursor. "due:c=2026-11-27" (or "due:c=" to clear) is the dialog's answer: the route alone
+    // SET DUE (cmd-shift-e): for the space you are in. "due:c=2026-11-27" (or "due:c=" to clear) is the dialog's answer: the route alone
     // writes the line.
     if (c === "due") {
       const w = this.world();
-      const letter = this.agendaMode ? this.agendaAt().column?.letter : (w.line?.slots ?? []).find((s) => s.space && s.space === w.cur?.space)?.letter;
+      const letter = (w.line?.slots ?? []).find((s) => s.space && s.space === w.cur?.space)?.letter;
       return this.openDue(letter);
     }
     const dueSet = parseDueCommand(c);
@@ -175,13 +186,10 @@ export default class Route {
       if (next !== line) setShared(LINE, next);
       return;
     }
-    // In the agenda, SIGN-OFF is for the space under the cursor (none on a free letter).
-    const under = this.agendaMode && c === "sign-off" ? this.agendaAt().column : null;
-    if (under && !under.space && !this.signDialog()) return;
-    // In the agenda, a move or a sign page folds it back first, so you see where you went.
-    if (this.agendaMode && (["next", "back", "next1", "back1", "close-up"].includes(c) || /^(sign-|go:|goto:)/.test(c))) this.fold();
+    // Over REVIEW, a move or a sign page folds it back first, so you see where you went.
+    if (shared(REVIEW) && (["next", "back", "next1", "back1", "close-up"].includes(c) || /^(sign-|go:|goto:)/.test(c))) this.fold();
     const sign = c.match(/^sign-(on|off)(?:[: ](.*))?$/);
-    if (sign) return this.sign(sign[1], sign[2] ?? "", null, under?.space?.id ?? null);
+    if (sign) return this.sign(sign[1], sign[2] ?? "");
     // CLOSE UP (cmd-u) opens a page that lists the moves; only its NEXT closes up the line.
     if (c === "close-up") return this.sign("up");
     const { all, cur } = this.world();
@@ -210,9 +218,8 @@ export default class Route {
   }
 
   /** A right-click menu item (spaceMenu, tabMenu in logic.js) runs the same code as its key.
-   *  target: { letter } for a space or { code } for a tab, and in the agenda the column and row
-   *  it was on, so the cursor moves there first and LAB, SIGN-OFF and PEEK act on it, as
-   *  their keys do. A space or tab that has gone since the menu opened does nothing. */
+   *  target: { letter } for a space or { code } for a tab. A space or tab that has gone since
+   *  the menu opened does nothing. */
   menuPick(id, target) {
     const w = this.world();
     const slot = target.letter ? (w.line?.slots ?? []).find((s) => s.letter === target.letter) : null;
@@ -222,20 +229,20 @@ export default class Route {
       stop: target.code ? w.all.find((s) => s.code === target.code) ?? null : null,
     };
     if (target.code ? !t.stop : !slot || (!t.space && id !== "sign-on" && id !== "close-up")) return;
-    if (this.agendaMode && target.col != null) this.cursor = { col: target.col, row: target.row ?? 0 };
     switch (id) {
-      case "go": return this.agendaMode ? this.agendaGo(t.stop) : this.go(t.stop);
+      case "go": return this.go(t.stop);
       case "rename-tab": return run("tab.rename", { id: t.stop.tab });
-      case "look": return this.lookAt(t.stop, target.from ?? (this.agendaMode ? "agenda" : "route"));
+      case "look": return this.lookAt(t.stop, target.from ?? "route");
       case "purpose": return this.openPurpose(t.stop);
+      case "folder": return this.openFolder(t.stop);
       case "due": return this.openDue(t.letter);
       case "rename": return run("space.rename", { id: t.space.id });
       // LAB on the line: the new-tab menu, for that space (answer 3: select it first).
       case "lab":
-        if (!this.agendaMode && t.space.id !== focused()?.space) run("space.select", { id: t.space.id });
+        if (t.space.id !== focused()?.space) run("space.select", { id: t.space.id });
         return this.lab();
-      case "sign-off": return this.agendaMode ? this.command("sign-off") : this.sign("off", "", null, t.space.id);
-      case "sign-on": return this.agendaMode ? this.agendaSignOn(t.letter) : this.sign("on", "", t.letter);
+      case "sign-off": return this.sign("off", "", null, t.space.id);
+      case "sign-on": return this.sign("on", "", t.letter);
       case "close-up": return this.command("close-up");
     }
   }
@@ -258,6 +265,13 @@ export default class Route {
 
   /** SET PURPOSE: a one-line dialog for your purpose of a stop's terminal, or close the open
    *  dialog (PLATO dialogs toggle). It starts with your purpose, if you set one. */
+  /** Open a stop's folder in the file manager (folderOpener). A stop with no known folder does nothing. */
+  openFolder(stop) {
+    if (!stop) return;
+    const folder = panes().find((p) => p.pane === stop.pane)?.cwd ?? terminals().find((t) => t.address === stop.terminal)?.cwd;
+    if (folder) exec(folderOpener(window()?.platform), [folder]).catch(() => {});
+  }
+
   openPurpose(stop) {
     const open = this.signDialog();
     if (open) {
@@ -269,7 +283,6 @@ export default class Route {
     const id = openOverlay({ mod: "plato", props: { role: "sign", page: "purpose", terminal: stop.terminal, code: stop.code, label: stop.label, text }, kind: "dialog", modal: true, width: 640, height: 330 });
     setShared(SIGN_DIALOG, { id, page: "purpose", space: stop.space, letter: null, at: Date.now() });
     markAlive("sign");
-    if (this.agendaMode) this.signing = true;
   }
 
   /** SET DUE: a one-line dialog for a space's due date, or close the open dialog (PLATO
@@ -287,70 +300,31 @@ export default class Route {
     const id = openOverlay({ mod: "plato", props: { role: "sign", page: "due", letter, name, text: slot.due ?? "" }, kind: "dialog", modal: true, width: 640, height: 330 });
     setShared(SIGN_DIALOG, { id, page: "due", space: slot.space, letter, at: Date.now() });
     markAlive("sign");
-    if (this.agendaMode) this.signing = true;
   }
 
-  /** LAB. In the agenda: fold back and start a terminal in a new tab on the space under the
-   *  cursor. On the line (the agenda was closed and plato.agenda is stale): the LAB menu. */
+  /** LAB: the new-tab menu (over REVIEW, after folding it back). */
   lab() {
-    if (!this.agendaMode) {
-      if (shared(AGENDA)) setShared(AGENDA, null);
-      return openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 });
-    }
-    const t = this.agendaAt().column;
-    if (!t?.space) return;
-    this.fold();
-    run("space.select", { id: t.space.id });
-    run("tab.new", { space: t.space.id, folder: t.space.folder });
+    if (shared(REVIEW)) this.fold();
+    return openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 });
   }
 
-  // ---- the agenda ----
+  // ---- REVIEW ----
 
-  /** Line ⇄ agenda: show the agenda in both stacks (appendix F). */
-  open() {
-    run("layout.select", { stack: "plato-main", child: "agenda-view" });
-    run("layout.select", { stack: "box", child: "box-agenda" });
-    setShared(AGENDA, { at: Date.now() });
+  /** Line ⇄ REVIEW: show REVIEW (the review-view block) and DUE (box-due) in the two stacks.
+   *  day and page, from "review:<day> <page>", say where REVIEW opens; without them, as usual. */
+  open(day = null, page = "day") {
+    run("layout.select", { stack: "plato-main", child: "review-view" });
+    run("layout.select", { stack: "box", child: "box-due" });
+    setShared(REVIEW, day ? { at: Date.now(), day, page } : { at: Date.now() });
   }
 
-  /** Fold the agenda back to the line, and give the keyboard back to the current stop. */
+  /** Fold REVIEW back to the line, and give the keyboard back to the current stop. */
   fold() {
-    if (!this.agendaMode) return;
     run("layout.select", { stack: "plato-main", child: "line-view" });
     run("layout.select", { stack: "box", child: "box-line" });
-    if (shared(AGENDA)) setShared(AGENDA, null);
-    this.cursor = null;
-    this.looking = false;
-    this.jumping = false;
-    this.signing = false;
+    if (shared(REVIEW)) setShared(REVIEW, null);
     const p = focused()?.pane;
     if (p) run("pane.focus", { pane: p });
-  }
-
-  /** The agenda's cursor. Before the agenda has drawn since it opened, it is where it will
-   *  start (the stop you are at), on lines made now, never a stale a1. */
-  agendaCursor() {
-    if (!this.cursor) {
-      const w = this.world();
-      this.columns = letterColumns(w.line, w.sp, w.all);
-      this.cursor = startCursor(this.columns, w.cur);
-    }
-    return this.cursor;
-  }
-
-  /** The column and stop under the agenda's cursor. The cursor comes first: before the agenda has
-   *  drawn since it opened, agendaCursor() makes new columns, and the cursor must be read on
-   *  those, not on the columns of the last time the agenda was open (a space since closed). */
-  agendaAt() {
-    const c = this.agendaCursor();
-    return cursorAt(this.columns ?? [], c);
-  }
-
-  /** The Space bar in the agenda: LOOK at the stop under the cursor, over the agenda. */
-  agendaLook(stop) {
-    if (!stop) return;
-    this.looking = true;
-    this.lookAt(stop, "agenda");
   }
 
   /** LOOK at a stop: its card as a dialog, or close the one open (PLATO dialogs toggle).
@@ -371,73 +345,6 @@ export default class Route {
   lookOpen() {
     const look = shared(LOOK);
     return look && Date.now() - look.at < ALIVE_MS ? look : null;
-  }
-
-  showCascade(cx) {
-    if (this.cascade !== "hide") return;
-    this.cascade = "run";
-    cx.notify();
-  }
-
-  /** Today's day file, and the four days before it for WEEK (each read once). */
-  async readDay() {
-    const key = dayKey(Date.now());
-    this.day.dirty = false;
-    const text = await readTextFile(`${appHome()}/${DATA}/${key}.json`).catch(() => null);
-    const fresh = freshDay(this.day, { key, events: parseDay(text) }); // a read caught mid-write keeps the last one
-    this.day = { key, events: fresh.events, dirty: this.day.dirty };
-    for (const d of weekDays(Date.now()).filter((x) => x.past && !this.past.has(x.key))) {
-      this.past.set(d.key, parseDay(await readTextFile(`${appHome()}/${DATA}/${d.key}.json`).catch(() => null)));
-    }
-  }
-
-  /** The agenda copy takes the keyboard for a moment after the agenda opens, and back after LOOK.
-   *  It also reads the day file when the agenda opens, if it changed or the day turned. */
-  claim(cx) {
-    this.showCascade(cx);
-    const y = shared(AGENDA);
-    if (y && this.dayFor !== y.at) {
-      this.dayFor = y.at;
-      if (this.day.dirty || this.day.key !== dayKey(Date.now())) cx.spawn(async (cx) => { await this.readDay(); cx.notify(); });
-    }
-    // The keys panel reads what the cursor is on (agendaCur) while the agenda is open.
-    if (y && this.agendaMode) {
-      const cur = agendaCur(this.agendaAt());
-      if (JSON.stringify(cur) !== JSON.stringify(y.cur ?? null)) setShared(AGENDA, { ...y, cur });
-    }
-    // The keys panel over the agenda: once it closes having run nothing, the agenda takes the
-    // keyboard back. A row it ran may have opened HELP, TERM or a rename, which keep it.
-    if (dialogOpen("keys")) { this.keyingAt ??= Date.now() - ALIVE_MS; return; }
-    if (this.keyingAt != null) {
-      const gaveBack = keysGaveBack(shared(KEYS_BACK), this.keyingAt);
-      this.keyingAt = null;
-      if (y && gaveBack && !this.looking && !this.jumping && !this.signing && !this.h.is_focused()) this.h.focus();
-    }
-    // LOOK, JUMP, SET PURPOSE or SET DUE from the agenda: once it closes, the agenda takes the
-    // keyboard back (unless it went to a tab, which folds the agenda).
-    if (this.looking || this.jumping || this.signing) {
-      if (this.looking ? this.lookOpen() : this.jumping ? dialogOpen("jump") : this.signDialog()) return;
-      this.looking = false;
-      this.jumping = false;
-      this.signing = false;
-      if (y && !this.h.is_focused()) this.h.focus();
-      return;
-    }
-    if (!y || this.h.is_focused() || Date.now() - y.at > 1500) return;
-    if (this.claimed !== y.at) { this.claimed = y.at; this.cursor = null; cx.notify(); }
-    this.h.focus();
-  }
-
-  agendaGo(stop) {
-    this.fold();
-    this.go(stop);
-  }
-
-  /** A free letter in the agenda: fold back and open sign-on for that letter. */
-  agendaSignOn(letter) {
-    this.fold();
-    if (this.signDialog()) return;
-    this.sign("on", "", letter);
   }
 
   go(stop) {
@@ -482,7 +389,6 @@ export default class Route {
     const w = this.world();
     const ag = agents();
     setAgentOrder(agentOrder(ag));
-    if (this.agendaMode) return this.agendaFrame(w, ag, cx);
     if (hiddenIn(layout(), "right")) return this.slimFrame(w, ag);
 
     const space = w.sp.find((s) => s.id === focused()?.space) ?? w.sp.find((s) => s.active);
@@ -507,7 +413,7 @@ export default class Route {
     return this.frame(v_flex().flex_1().min_h(0).gap(8)
       .child(v_flex().id("route-scroll").flex_1().min_h(0).overflow_y_scrollbar().child(picture))
       // While the pointer is on a tab, the readout shows that tab's detail instead.
-      .child(((hov) => (hov ? agendaview.detailBlock(hov) : this.readout(next, prev, n1Stop, n1, back1)))(agendaview.hovered(this, w.all, w.sp, Date.now(), 30)))
+      .child(((hov) => (hov ? detailBlock(hov) : this.readout(next, prev, n1Stop, n1, back1)))(hovered(this, w.all, w.sp, Date.now(), 30)))
       .child(v_flex().text_size(11).line_height("14px").text_color(C.dim)
         .child(h_flex().gap(4).items_center()
           .child(this.swatch("square", "fill")).child(div().child("this space ·"))
@@ -522,42 +428,10 @@ export default class Route {
           .child(this.tag("WAITING")).child(div().child("its space")))), "ROUTE", this.routeNote(tree));
   }
 
-  agendaFrame(w, ag, cx) {
-    // The opening cascade, once per opening: this render draws the cards hidden, the next
-    // fades them in row by row with native transitions (agendaview.js). The next render comes
-    // from a timer here, or claim() (every 200 ms) if a render that came first dropped it.
-    // Only while the window is active: in the background Herdr draws few frames, so the fade
-    // would stall with the cards hidden (seen when a script opened the agenda).
-    const y = shared(AGENDA);
-    if (y && this.cascadeFor !== y.at && !checking()) {
-      this.cascadeFor = y.at;
-      this.cascade = appWindow().active ? "hide" : "run";
-      if (this.cascade === "hide") cx.timer.after(16, (cx) => this.showCascade(cx));
-    }
-    const n1 = next1Agent(ag, focused()?.terminal ?? null);
-    const yw = {
-      columns: letterColumns(w.line, w.sp, w.all),
-      line: w.line,
-      day: this.day?.events ?? null,
-      days: new Map([...(this.past ?? []), [this.day?.key ?? "", this.day?.events ?? []]]),
-      cur: w.cur,
-      next: nextStop(w.all, w.cur),
-      prev: prevStop(w.all, w.cur),
-      n1,
-      n1Stop: n1 ? w.all.find((s) => s.pane === n1.pane) ?? null : null,
-      back1: backStop(shared(LINE_BACK), w.all, w.cur),
-    };
-    this.columns = yw.columns;
-    return div().id("agenda").size_full().track_focus(this.h)
-      .on_key_down((e, cx) => { if (agendaview.key(this, e, this.columns ?? [])) { cx.stop_propagation(); cx.notify(); } })
-      .on_mouse_down("left", () => this.h.focus())
-      .child(this.frame(agendaview.draw(this, yw, this.agendaView === "week" ? agendaweek.body(this, yw) : null), "AGENDA", `${keyText({ cmd: "agenda" })} or Esc closes the agenda`));
-  }
-
   /** Focus mode (FOCUS hides the right column and narrows this block): the line as a column
    *  of lettered space squares, as on the full route. The current space is filled, with its stop number under it; a space
    *  with an agent waiting for you pulses. A click goes to that space. This copy stays
-   *  shown, so NEXT, BACK, NEXT1 and the agenda keep working. */
+   *  shown, so NEXT, BACK, NEXT1 and REVIEW keep working. */
   slimFrame(w, ag) {
     const cur = w.cur;
     const waiting = waitingLetters(ag, w.all, focused()?.terminal ?? null);
@@ -579,12 +453,12 @@ export default class Route {
       v_flex().flex_1().min_h(0).border_1().border_color(C.fg).items_center().py(8).gap(10).children(items));
   }
 
-  /** The route's title note: TREE (in reverse video while it is on) and AGENDA, with their keys.
+  /** The route's title note: TREE (in reverse video while it is on) and REVIEW, with their keys.
    *  A click on either runs its command, as the key does. */
   routeNote(tree) {
     const click = (el, c) => el.cursor_pointer().hover((st) => st.text_color(C.bright)).on_click(() => this.command(c));
     const treeEl = click(div().id("note-tree").px(tree ? 3 : 0).child(`TREE ${keyText({ cmd: "tree" })}`), "tree");
-    return h_flex().gap(12).child(tree ? treeEl.bg(C.fg).text_color(C.bg) : treeEl).child(click(div().id("note-agenda").child(`AGENDA ${keyText({ cmd: "agenda" })}`), "agenda"));
+    return h_flex().gap(12).child(tree ? treeEl.bg(C.fg).text_color(C.bg) : treeEl).child(click(div().id("note-review").child(`REVIEW ${keyText({ cmd: "review" })}`), "review"));
   }
 
   frame(child, title = "ROUTE", note = null) {
@@ -643,7 +517,7 @@ export default class Route {
     const free = !slot.space;
     const current = space && space.id === (focused()?.space ?? null);
     // The space's square holds its letter, like a key cap: the letter is the address you
-    // type in the agenda, and it stays whole when a long name is cut.
+    // type, and it stays whole when a long name is cut.
     const B = ROW.slotBox;
     let mark = div().absolute().left(LINE_X - B / 2).top((ROW.slot - B) / 2).w(B).h(B).border_1()
       .flex().items_center().justify_center().text_size(12).line_height(`${B - 2}px`).child(slot.letter);
@@ -663,7 +537,7 @@ export default class Route {
       .child(label).when(waits, (el) => el.child(this.waitTag("WAITING", slot.letter)));
     // A right-click on the square or the name opens the space's menu.
     const items = spaceMenu({ free, freeLetters: this.freeLetters ?? 0 });
-    return agendaview.rightClick(this, box.child(mark).child(row), items, { letter: slot.letter });
+    return rightClick(this, box.child(mark).child(row), items, { letter: slot.letter });
   }
 
   /** A legend mark, drawn like the route's own: a space square (filled, hollow or
@@ -681,7 +555,7 @@ export default class Route {
     return m;
   }
 
-  /** A small reverse-video tag ("WAITING", "WAIT"), as the agenda's cards use. */
+  /** A small reverse-video tag ("WAITING", "WAIT"), as REVIEW and the route use. */
   tag(word) {
     return div().flex_none().px(3).text_size(11).line_height("14px").bg(C.bright).text_color(C.bg).child(word);
   }
@@ -713,7 +587,7 @@ export default class Route {
     if (s.status === "blocked") d = d.loop("opacity", { from: 0.4, to: 1, period: 1100 });
     const hit = div().id(`dot-${stopKey(s)}`).size_full().cursor_pointer().on_click(() => this.go(s));
     const area = div().absolute().left(x - 6).top(0).w(12).h(ROW.dots)
-      .child(agendaview.tabTrigger(this, hit, s, false));
+      .child(tabTrigger(this, hit, s));
     return div().children([d, area]);
   }
 
@@ -740,7 +614,7 @@ export default class Route {
       .child(div().text_size(12).line_height("15px").truncate().text_color(isCur ? C.bright : stateColor(s.status)).child(sub));
     text = isCur ? text.bg(C.glow).border_1().border_color(C.fg) : text.cursor_pointer().hover((st) => st.bg(C.glow)).on_click(() => this.go(s));
     // Hovering the row, its lamp included, shows the tab's detail in the readout.
-    return agendaview.hoverable(this, box, s).children([mark, agendaview.rightClick(this, text, tabMenu({ current: isCur, inAgenda: false }), { code: s.code })]);
+    return hoverable(this, box, s).children([mark, rightClick(this, text, tabMenu({ current: isCur }), { code: s.code })]);
   }
 
   /** TREE: another space's stop as one line: lamp, code, program (claude, codex, zsh)
@@ -758,7 +632,7 @@ export default class Route {
       .child(div().flex_none().text_color(col).child(stateWord(s.status)));
     // Hovering the row shows its detail, as on a dot.
     const area = div().absolute().left(x + 14).top(2).w(RUN_X - x - 24).h(ROW.compact - 4)
-      .child(agendaview.tabTrigger(this, text, s, false));
+      .child(tabTrigger(this, text, s));
     return box.children([mark, area]);
   }
 

@@ -10,16 +10,16 @@ const DIR = new URL("../", import.meta.url);
 /** Each file's layer. A helper belongs to one role and may be imported only by it. */
 const LAYERS = {
   // Pure logic: no Herdr or GPUI, so Node can test it. Imports only other pure files.
-  line: "pure", agenda: "pure", overview: "pure", day: "pure", sign: "pure", glow: "pure", logic: "pure", commands: "pure", shared: "pure", leader: "pure", stripdata: "pure",
+  line: "pure", overview: "pure", day: "pure", sign: "pure", glow: "pure", logic: "pure", commands: "pure", shared: "pure", leader: "pure", stripdata: "pure", reviewdata: "pure",
   // The drawing kit: colors and boxes.
   look: "kit",
   // Actions that more than one role runs: dialogs, the keys, the viewer pane, LOOK's card.
   keys: "actions", lookdata: "actions",
   // One file per role (main.js's ROLES).
   banner: "role", files: "role", help: "role", keyset: "role", nowat: "role", route: "role",
-  signals: "role", signpage: "role", strip: "role", timetable: "role", viewer: "role", menu: "role", lookpage: "role", jumppage: "role", keyspage: "role",
+  signals: "role", signpage: "role", strip: "role", timetable: "role", viewer: "role", menu: "role", lookpage: "role", jumppage: "role", keyspage: "role", review: "role",
   // A role's own helpers.
-  agendaview: "helper:route", agendaweek: "helper:route", recorder: "helper:banner",
+  recorder: "helper:banner",
   main: "main",
 };
 

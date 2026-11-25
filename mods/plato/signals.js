@@ -3,18 +3,19 @@
 //   "signals" (the top of the right column, always shown): SIGNALS lists the agents that
 //   need you in NEXT1 order (blocked, longest waiting first; then done but not seen, oldest
 //   first), without the one you are at. The first row is where NEXT1 goes.
-//   "due" (in place of TODAY and FILES while the agenda is open): DUE lists the spaces with
-//   a due date, soonest first (a late one in reverse video, two days or fewer bright); under
-//   it, the agent that has run longest and the one idle longest. (The agenda's header counts the
-//   spaces and tabs, and SIGNALS shows who waits.)
+//   "due" (in place of TODAY and FILES while REVIEW is open): DUE lists the spaces with
+//   a due date, soonest first (a late one in reverse video, two days or fewer bright). Under
+//   it, RUNNING lists the agents working now, longest first, with your purpose, the time and
+//   the progress, and one line for the idle ones. Like SIGNALS, both show now, whatever day
+//   REVIEW shows.
 // Reads only; writes nothing. A click on a SIGNALS row goes to that agent (plato.go).
 
 import { div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, agents, shared, focused, props, run, openOverlay } from "herdr";
+import { spaces, panes, agents, shared, focused, props, run, openOverlay, terminals } from "herdr";
 import { C, FONT } from "./look.js";
 import { stops, duration, currentStop } from "./line.js";
-import { signalRows, tabTotals, stateSince } from "./overview.js";
+import { signalRows, stateSince, runningRows } from "./overview.js";
 import { tabMenu } from "./logic.js";
 import { keyText } from "./keys.js";
 import { dueList, dueWords } from "./day.js";
@@ -37,10 +38,11 @@ export default class Signals {
     const all = stops(line, sp, panes());
     const base = v_flex().id("signals").size_full().font_family(FONT).text_size(14).line_height("19px").bg(C.bg).text_color(C.fg);
     if ((props()?.mode ?? "signals") === "due") {
+      const labels = new Map(terminals().map((t) => [t.address, t.labels ?? {}]));
+      const run = runningRows(all, sp, labels, now);
       return base
-        .child(this.panel("DUE", "soonest first", v_flex().gap(8)
-          .child(this.due(dueList(line, sp, now)))
-          .child(this.ages(tabTotals(line, all, sp), now))).flex_1().min_h(0));
+        .child(this.panel("DUE", "soonest first", this.due(dueList(line, sp, now))).flex_none())
+        .child(this.panel("RUNNING", run.rows.length ? `${run.rows.length} working · longest first` : "", this.running(run)).flex_1().min_h(0));
     }
     const here = focused()?.terminal ?? null;
     const rows = signalRows(agents(), all).filter((r) => r.agent.address !== here);
@@ -79,7 +81,7 @@ export default class Signals {
         .when(Boolean(stop), (el) => el.on_mouse_down("right", (_e, cx) => {
           cx.stop_propagation();
           const current = currentStop(stops(shared(LINE) ?? null, sp, panes()), focused())?.code === stop.code;
-          openOverlay({ mod: "plato", kind: "popup", width: 240, props: { role: "menu", items: tabMenu({ current, inAgenda: false }), target: { code: stop.code, from: "signals" } } });
+          openOverlay({ mod: "plato", kind: "popup", width: 240, props: { role: "menu", items: tabMenu({ current }), target: { code: stop.code, from: "signals" } } });
         }))
         .child(this.badge(stop?.letter ?? null, first))
         .child(v_flex().flex_1().min_w(0)
@@ -103,11 +105,20 @@ export default class Signals {
     }));
   }
 
-  /** The agent that has run longest and the one idle longest, under the DUE list. */
-  ages(t, now) {
-    const since = (x) => (x ? `${x.stop.code} ${x.stop.label} · ${duration(x.since, now)}` : "—");
-    return v_flex().pt(4).border_t(1).border_color(C.glow).text_size(12).line_height("15px").text_color(C.dim)
-      .child(div().truncate().child(`longest running: ${since(t.longest)}`))
-      .child(div().truncate().child(`oldest idle: ${since(t.oldestIdle)}`));
+  /** RUNNING: the working agents now, longest first (runningRows: the code, your purpose or the
+   *  tab's name, the time running and the progress), in a list that scrolls, and the idle line. */
+  running(r) {
+    const rows = r.rows.map((x, i) => v_flex().id(`run-${i}`).min_w(0)
+      .child(h_flex().gap(6).min_w(0)
+        .child(div().flex_none().text_color(C.bright).child(x.code))
+        .child(div().flex_1().min_w(0).truncate().text_color(C.text).child(x.words)))
+      .child(h_flex().gap(8).text_size(12).line_height("15px").text_color(C.dim)
+        .child(div().child(`running ${x.time}`))
+        .when(Boolean(x.tasks), (el) => el.child(div().child(x.tasks)))));
+    return v_flex().flex_1().min_h(0).gap(6)
+      .child(v_flex().id("run-list").flex_1().min_h(0).gap(8).overflow_y_scrollbar()
+        .children(rows.length ? rows : [div().text_color(C.dim).child("No agent is working.")]))
+      .child(div().flex_none().pt(4).border_t(1).border_color(C.glow).text_size(12).line_height("15px").text_color(C.dim).truncate().child(r.idle));
   }
+
 }

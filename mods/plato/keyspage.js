@@ -5,18 +5,15 @@
 // the bottom. A letter closes the panel, then runs its command. ctrl-g or Esc closes it. A key
 // with no command closes it, and the banner says "⌘K q is undefined" (shared plato.notice).
 // A click on a row runs it; a left or right click beside the panel, or a lost keyboard, closes it.
-// Over the agenda, LAB, PURPOSE, DUE and SIGN-OFF act on the cursor, as their keys do there,
-// and RENAME TAB renames the cursor's tab, as the agenda's right-click RENAME TAB does. The
-// route writes what the cursor is on in shared plato.agenda; the panel names it.
 
 import { div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { props, closeOverlay, run, keys, shared, setShared, checking } from "herdr";
+import { props, closeOverlay, run, keys, setShared, checking } from "herdr";
 import { C, FONT, SIZE, shortcut } from "./look.js";
 import { PANEL_MS, leaderKey, leaderGroups, chordOf } from "./leader.js";
 import { BEAT_MS } from "./logic.js";
 import { keyText, perform, dialogClosed, alive } from "./keys.js";
-import { NOTICE, AGENDA, KEYS_BACK } from "./shared.js";
+import { NOTICE, KEYS_BACK } from "./shared.js";
 
 /** Room below the panel for the keyset, so the panel never covers the keys. */
 const KEYSET_ROOM = 40;
@@ -61,7 +58,7 @@ export default class Keys {
     else run(row.action);
   }
 
-  /** Close having run nothing: the agenda, if open, takes the keyboard back. */
+  /** Close having run nothing: REVIEW, if open, takes the keyboard back. */
   giveBack() {
     setShared(KEYS_BACK, { at: Date.now() });
     this.close();
@@ -87,7 +84,7 @@ export default class Keys {
   }
 
   /** One row: the letter (and HELP's "?"), the name, and the direct key. */
-  row(r, cur) {
+  row(r) {
     const cap = (t) => div().min_w(26).flex_none().px(4).border_1().border_color(C.fg).text_color(C.bright).text_center().child(t);
     const direct = r.cancel ? "esc" : r.action ? actionText(r.action) : keyText({ cmd: r.cmd }); // RENAME TAB: F2
     return h_flex().id(`keys-${r.name}`).w_full().gap(10).items_center().cursor_pointer()
@@ -96,22 +93,18 @@ export default class Keys {
       .child(cap(r.key))
       .when(Boolean(r.also), (el) => el.child(cap(r.also)))
       .child(div().text_color(r.cancel ? C.dim : C.fg).child(r.name))
-      .when(Boolean(cur && r.on), (el) => el.child(div().text_color(C.bright).child((r.on === "tab" ? cur.code : cur.space) ?? "")))
       .child(div().ml_auto().text_color(C.dim).child(direct));
   }
 
   panel() {
-    const cur = shared(AGENDA)?.cur ?? null;
-    const where = cur && `${cur.code ?? cur.space} ${cur.name}${cur.label ? ` · ${cur.label}` : ""}`;
     const head = h_flex().gap(12).items_center()
       .child(div().px(6).bg(C.fg).text_color(C.bg).child(keyText({ cmd: "keys" }) || "⌘K"))
       .child(div().text_color(C.bright).child("▸ KEYS"))
-      .when(Boolean(cur), (el) => el.child(div().min_w(0).truncate().text_color(C.fg).child(`in the agenda: e d l k r act on the cursor, ${where}`)))
       .child(div().ml_auto().text_color(C.dim).child("one plain key · ⌃G or esc cancels · or click a row"));
     const cols = h_flex().w_full().gap(28).items_start().children(leaderGroups().map((g) =>
       v_flex().flex_1().min_w(0).pl(10).gap(1).border_l(1).border_color(C.glow)
         .child(div().text_color(C.bright).child(g.title))
-        .children(g.rows.map((r) => this.row(r, cur)))));
+        .children(g.rows.map((r) => this.row(r)))));
     return v_flex().id("keys-panel").w_full().gap(10).px(20).py(10).bg(C.bg).border_1().border_color(C.fg)
       .font_family(FONT).text_size(SIZE).line_height(`${SIZE + 7}px`).text_color(C.fg)
       // A press on the panel never drags it, and a right-click on it does nothing.

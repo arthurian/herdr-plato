@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   projectFolder, notesCwd, parseListing, folderRows, viewerKind, dirsToRefresh,
-  isHidden, findNode, keysetPad, focusCommands, ROUTE_PX, ROUTE_SLIM_PX, pageFor, helpScreens, helpKey, dialogAction, closeAction, liveRecord, ALIVE_MS, BEAT_MS, moveHeld, ownEnter, spaceMenu, tabMenu, noticeLive, NOTICE_MS, noticeStale, keysGaveBack,
+  isHidden, findNode, keysetPad, focusCommands, ROUTE_PX, ROUTE_SLIM_PX, pageFor, helpScreens, helpKey, dialogAction, closeAction, liveRecord, ALIVE_MS, BEAT_MS, moveHeld, ownEnter, spaceMenu, tabMenu, folderOpener, noticeLive, NOTICE_MS, noticeStale, keysGaveBack,
 } from "../logic.js";
 
 // ---- FILES and the viewer ----
@@ -75,7 +75,7 @@ test("keysetPad: the route on the left, the right column on the right, so the ke
     { id: "main-row", children: [
       { id: "plato-main", type: "stack", active: o.active ?? "line-view", children: [
         { id: "line-view", children: [{ id: "route", size: { px: o.route ?? 260 } }, { id: "work" }] },
-        { id: "agenda-view" },
+        { id: "review-view" },
       ] },
       { id: "right", size: { px: 280 }, hidden: Boolean(o.focus) },
     ] },
@@ -86,8 +86,8 @@ test("keysetPad: the route on the left, the right column on the right, so the ke
   assert.deepEqual(keysetPad(layout()), { left: 260, right: 280 });
   // FOCUS: the route narrowed to its squares, the right column hidden
   assert.deepEqual(keysetPad(layout({ route: 56, focus: true })), { left: 56, right: 0 });
-  // the agenda replaces the route and the terminal: center under the agenda
-  assert.deepEqual(keysetPad(layout({ active: "agenda-view" })), { left: 0, right: 280 });
+  // REVIEW replaces the route and the terminal: center under REVIEW
+  assert.deepEqual(keysetPad(layout({ active: "review-view" })), { left: 0, right: 280 });
   assert.deepEqual(keysetPad(null), { left: 0, right: 0 });
 });
 
@@ -123,13 +123,15 @@ test("helpScreens: KEYS with one short line each, then WORDS; no lesson or page"
   const [keys, words] = helpScreens();
   assert.deepEqual([keys.name, words.name], ["KEYS", "WORDS"]);
   const names = keys.rows.map((r) => r[0]);
-  for (const n of ["NEXT", "BACK", "NEXT1", "BACK1", "AGENDA", "JUMP", "TREE", "PICKER", "SIGN-ON", "SIGN-OFF", "CLOSE UP", "DUE", "RENAME", "RENAME TAB", "LAB", "TERM", "GLOW", "FOCUS", "HELP", "CLOSE"]) assert.ok(names.includes(n), n);
+  for (const n of ["NEXT", "BACK", "NEXT1", "BACK1", "REVIEW", "JUMP", "TREE", "PICKER", "SIGN-ON", "SIGN-OFF", "CLOSE UP", "DUE", "RENAME", "RENAME TAB", "LAB", "TERM", "GLOW", "FOCUS", "HELP", "CLOSE"]) assert.ok(names.includes(n), n);
   assert.ok(keys.rows.every((r) => r[2].length <= 50), "each key fits on one line");
   assert.match(keys.rows.find((r) => r[0] === "TERM")[2], /command palette/);
   assert.deepEqual(keys.rows.find((r) => r[0] === "PICKER")[1], { action: "mod.open:picker" });
   assert.deepEqual(keys.rows.find((r) => r[0] === "RENAME")[1], { action: "space.rename" });
-  assert.deepEqual(words.rows.map((r) => r[0]), ["letter", "code", "free letter", "WAITING", "the route", "SIGNAL", "in the agenda", "JUMP", "purpose"]);
-  assert.ok(![...keys.rows, ...words.rows].some((r) => /lesson|page/i.test(r[2])));
+  assert.match(words.rows.find((r) => r[0] === "in REVIEW")[2], /DAY.*COMMENTS.*a result.*a comment.*copies the note.*closes REVIEW/);
+  assert.equal(keys.rows.find((r) => r[0] === "REVIEW")[2], "Show the day: results, posts and facts.");
+  assert.deepEqual(words.rows.map((r) => r[0]), ["letter", "code", "free letter", "WAITING", "the route", "SIGNAL", "in REVIEW", "JUMP", "purpose"]);
+  assert.ok(![...keys.rows, ...words.rows].some((r) => /lesson|page/i.test(r[2])), "no lesson or page");
 });
 
 test("helpKey: → and Enter go on, ← back, a number straight there, Esc closes", () => {
@@ -168,14 +170,12 @@ test("spaceMenu: a space offers RENAME, LAB, SET DUE and SIGN-OFF; a free letter
   assert.deepEqual(spaceMenu({ free: false, freeLetters: 0 })[3].key, { cmd: "signoff" });
 });
 
-test("tabMenu: GO except where you are, then LOOK, RENAME TAB and SET PURPOSE always; LOOK shows the Space bar only in the agenda", () => {
+test("tabMenu: GO except where you are, then LOOK, RENAME TAB, SET PURPOSE and FOLDER always", () => {
   const ids = (m) => m.map((i) => i.id);
-  assert.deepEqual(ids(tabMenu({ current: false, inAgenda: false })), ["go", "look", "rename-tab", "purpose"]);
-  assert.deepEqual(ids(tabMenu({ current: true, inAgenda: false })), ["look", "rename-tab", "purpose"]);
-  assert.deepEqual(ids(tabMenu({ current: false, inAgenda: true })), ["go", "look", "rename-tab", "purpose"]);
-  assert.deepEqual(tabMenu({ current: false, inAgenda: true })[1].key, { text: "space" });
-  assert.deepEqual(tabMenu({ current: false, inAgenda: false })[1].key, { text: "" });
-  assert.deepEqual(tabMenu({ current: true, inAgenda: false })[2].key, { cmd: "purpose" });
+  assert.deepEqual(ids(tabMenu({ current: false })), ["go", "look", "rename-tab", "purpose", "folder"]);
+  assert.deepEqual(ids(tabMenu({ current: true })), ["look", "rename-tab", "purpose", "folder"]);
+  assert.deepEqual(tabMenu({ current: false })[1].key, { text: "" });
+  assert.deepEqual(tabMenu({ current: true })[2].key, { cmd: "purpose" });
 });
 
 test("liveRecord: a sign dialog's record while it reports alive; a stale record is no dialog", () => {
@@ -188,7 +188,7 @@ test("liveRecord: a sign dialog's record while it reports alive; a stale record 
 });
 
 test("ALIVE_MS and BEAT_MS: Herdr closes a dialog on Esc without a word, so it must count as closed within a second, yet two missed beats must not close it", () => {
-  // The agenda takes the keyboard back only once the dialog counts as closed; keys before that are lost.
+  // REVIEW takes the keyboard back only once the dialog counts as closed; keys before that are lost.
   assert.ok(ALIVE_MS <= 1000, `ALIVE_MS ${ALIVE_MS}`);
   assert.ok(ALIVE_MS >= 3 * BEAT_MS, `ALIVE_MS ${ALIVE_MS} vs BEAT_MS ${BEAT_MS}`);
 });
@@ -198,7 +198,7 @@ test("moveHeld: NEXT, BACK, NEXT1 and BACK1 do nothing while LOOK, JUMP, HELP or
     assert.equal(moveHeld(c, ["jump"]), true, c);
     assert.equal(moveHeld(c, []), false, c);
   }
-  assert.equal(moveHeld("agenda", ["look"]), false, "only the moves are held");
+  assert.equal(moveHeld("review", ["look"]), false, "only the moves are held");
   assert.equal(moveHeld("goto:c1", ["look"]), false, "LOOK's own Enter still goes");
 });
 
@@ -228,9 +228,16 @@ test("noticeStale: the banner clears a notice once its two seconds pass", () => 
   assert.equal(noticeStale(null, now), false);
 });
 
-test("keysGaveBack: the agenda takes the keyboard back only when the keys panel ran nothing", () => {
+test("keysGaveBack: REVIEW takes the keyboard back only when the keys panel ran nothing", () => {
   const since = 1795456000000;
   assert.equal(keysGaveBack({ at: since + 300 }, since), true);
   assert.equal(keysGaveBack({ at: since - 5000 }, since), false); // an older panel's
   assert.equal(keysGaveBack(null, since), false);
+});
+
+test("folderOpener: open on macOS, explorer on Windows, xdg-open elsewhere", () => {
+  assert.equal(folderOpener("macos"), "open");
+  assert.equal(folderOpener("windows"), "explorer");
+  assert.equal(folderOpener("linux"), "xdg-open");
+  assert.equal(folderOpener(undefined), "xdg-open");
 });

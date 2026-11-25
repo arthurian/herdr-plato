@@ -15,7 +15,7 @@ export const KEYS = [
   { name: "NEXT1", cmd: "next1" },
   { name: "BACK1", cmd: "back1" },
   { name: "JUMP", cmd: "jump" },
-  { name: "AGENDA", cmd: "agenda" },
+  { name: "REVIEW", cmd: "review" },
   { name: "FOCUS", cmd: "focus" },
   { name: "LAB", cmd: "lab" },
   { name: "TERM", cmd: "term" },
@@ -109,7 +109,7 @@ export function focusOn() {
 }
 
 /** Run a PLATO key: HELP, KEYS, FOCUS and CLOSE here; the others as their plato.* command, which
- *  the role that owns it takes (NEXT, LAB and AGENDA the route, GLOW the banner). */
+ *  the role that owns it takes (NEXT, LAB and REVIEW the route, GLOW the banner). */
 export async function perform(command) {
   const [cmd, arg] = command.split(":");
   switch (cmd) {

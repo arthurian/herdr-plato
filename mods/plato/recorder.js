@@ -1,15 +1,15 @@
 // The day recorder, a helper of the banner role: the banner is on screen in every view of the
-// layout (the agenda and FOCUS hide TODAY, never the banner), so the record has no gap while
+// layout (REVIEW and FOCUS hide TODAY, never the banner), so the record has no gap while
 // PLATO is shown. Records each agent state change and focus change to
 // plato-data/YYYY-MM-DD.json under the app home, only when something changes; see day.js for
-// the events. TODAY (timetable.js), the agenda (route.js), LOOK and JUMP read the files.
+// the events. TODAY (timetable.js), REVIEW (review.js), LOOK and JUMP read the files.
 // The banner calls record() in each render and on its one-second timer, and close() when the
 // app quits or the layout changes. Another layout, or a closed app, is a gap.
 
-import { spaces, panes, focused, shared, appHome, readTextFile, checking } from "herdr";
+import { spaces, panes, terminals, focused, shared, appHome, readTextFile, checking } from "herdr";
 import * as fs from "fs/promises";
 import { stops, currentStop } from "./line.js";
-import { dayKey, oldDayFiles, worldOf, dayText, parseDay, recordStep } from "./day.js";
+import { dayKey, oldDayFiles, oldPostFolders, worldOf, dayText, parseDay, recordStep, writeStuck } from "./day.js";
 import { LINE } from "./shared.js";
 
 const DIR = "plato-data";
@@ -19,6 +19,7 @@ export class Recorder {
   constructor(cx) {
     this.state = { day: dayKey(Date.now()), events: null, prev: null };
     this.writing = Promise.resolve();
+    this.running = null; // the write in progress: { at }, or null
     if (checking()) return;
     cx.spawn(async () => {
       const text = await readTextFile(this.file(this.state.day)).catch(() => null);
@@ -32,11 +33,13 @@ export class Recorder {
     return `${appHome()}/${DIR}/${day}.json`;
   }
 
-  /** Delete day files older than KEEP_DAYS (day.js). */
+  /** Delete day files and post folders older than KEEP_DAYS (day.js). */
   async prune() {
     const dir = `${appHome()}/${DIR}`;
     const names = await fs.readdir(dir).catch(() => []);
     for (const n of oldDayFiles(names, Date.now())) await fs.unlink(`${dir}/${n}`).catch(() => null);
+    const posts = await fs.readdir(`${dir}/posts`).catch(() => []);
+    for (const n of oldPostFolders(posts, Date.now())) await fs.rm(`${dir}/posts/${n}`, { recursive: true, force: true }).catch(() => null);
   }
 
   /** Compare the world with the last one recorded, and write the day file if it changed. */
@@ -44,21 +47,38 @@ export class Recorder {
     if (checking() || !this.state.events) return;
     const line = shared(LINE) ?? null;
     const sp = spaces();
-    const all = stops(line, sp, panes());
-    const w = worldOf(line, sp, all, currentStop(all, focused())?.code ?? null);
+    const ps = panes();
+    const all = stops(line, sp, ps);
+    const w = worldOf(line, sp, all, currentStop(all, focused())?.code ?? null, terminals(), ps);
     const { write, ...next } = recordStep(this.state, w, now);
     this.state = next;
     if (write) this.save();
   }
 
   save() {
+    this.unstick();
     const { day, events } = this.state, text = dayText(day, events);
     this.writing = this.writing
       .then(async () => {
-        await fs.mkdir(`${appHome()}/${DIR}`, { recursive: true });
-        await fs.writeFile(this.file(day), text);
+        const job = { at: Date.now() };
+        this.running = job;
+        try {
+          await fs.mkdir(`${appHome()}/${DIR}`, { recursive: true });
+          await fs.writeFile(this.file(day), text);
+        } finally {
+          if (this.running === job) this.running = null;
+        }
       })
       .catch((e) => console.log(`plato recorder: could not write ${day}: ${e}`));
+  }
+
+  /** Each write waits for the one before it, so one write that never ends would stop the
+   *  record for the rest of the day. Drop a stuck write: the next write holds the whole day. */
+  unstick() {
+    if (!writeStuck(this.running?.at ?? null, Date.now())) return;
+    console.log("plato recorder: dropped a stuck write");
+    this.running = null;
+    this.writing = Promise.resolve();
   }
 
   /** The app quits or the layout changes: end the session, so the time until the next start
@@ -68,6 +88,7 @@ export class Recorder {
     const { day } = this.state;
     const events = [...this.state.events, { t: Date.now(), e: "close" }];
     this.state = { ...this.state, events };
+    this.unstick();
     await this.writing;
     await fs.writeFile(this.file(day), dayText(day, events)).catch(() => null);
   }

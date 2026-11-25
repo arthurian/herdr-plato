@@ -1,5 +1,5 @@
 // The look role: LOOK, a tab's details before you go there, as a modal dialog that the
-// route role opens (the agenda's Space bar, or LOOK in a tab's right-click menu).
+// route role opens (REVIEW's Space bar, or LOOK in a tab's right-click menu).
 //   props { role: "look", codes: ["c1", "c2", ...], at, from }
 // codes is the order the arrow keys step through (the line's NEXT order, or the waiting
 // agents in NEXT1 order from SIGNALS); at is the card shown first. The card is drawn live

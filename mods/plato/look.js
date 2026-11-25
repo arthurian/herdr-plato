@@ -10,6 +10,9 @@ export const C = {
   get fg() { return theme().accent ?? "#ff8a1f"; },
   get bright() { return theme().ansi11 ?? "#ffd08a"; },
   get dim() { return theme().ansi8 ?? "#a8622a"; },
+  // Plain text, apart from the accent (results and reports in REVIEW). A one-color glow sets it
+  // to the accent, so there it changes nothing.
+  get text() { return theme().foreground ?? theme().accent ?? "#ff8a1f"; },
   get glow() { return `${(theme().accent ?? "#ff8a1f").slice(0, 7)}24`; },
 };
 

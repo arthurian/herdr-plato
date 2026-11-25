@@ -8,27 +8,27 @@ export const PANEL_MS = 500;
 /** Each row: the key, the name shown, and what it runs. cmd is a PLATO key for perform()
  *  (keys.js); action is a Herdr command. A lowercase move is the plain move, its capital
  *  the "1" move. HELP also takes "?". CANCEL is drawn but never typed: ctrl-g and Esc.
- *  RENAME TAB runs plato.rename-tab, so the route renames the agenda cursor's tab; its
- *  action is Herdr's command, whose key (F2) the panel shows.
- *  on: with the agenda open, the row acts on the cursor's space or tab, and names it. */
+ *  RENAME TAB runs plato.rename-tab, so the route renames the tab you are at; its
+ *  action is Herdr's command, whose key (F2) the panel shows. */
 export const LEADER = [
   { group: "MOVE", key: "n", name: "NEXT", cmd: "next" },
   { group: "MOVE", key: "p", name: "BACK", cmd: "back" },
   { group: "MOVE", key: "N", name: "NEXT1", cmd: "next1" },
   { group: "MOVE", key: "P", name: "BACK1", cmd: "back1" },
   { group: "MOVE", key: "j", name: "JUMP", cmd: "jump" },
-  { group: "VIEW", key: "a", name: "AGENDA", cmd: "agenda" },
+  { group: "VIEW", key: "r", name: "REVIEW", cmd: "review" },
   { group: "VIEW", key: "t", name: "TREE", cmd: "tree" },
   { group: "VIEW", key: "f", name: "FOCUS", cmd: "focus" },
   { group: "VIEW", key: "z", name: "ZOOM", action: "pane.zoom" },
   { group: "VIEW", key: "g", name: "GLOW", cmd: "glow" },
   { group: "SPACE AND TAB", key: "s", name: "SIGN-ON", cmd: "signon" },
-  { group: "SPACE AND TAB", key: "l", name: "LAB", cmd: "lab", on: "space" },
-  { group: "SPACE AND TAB", key: "e", name: "PURPOSE", cmd: "purpose", on: "tab" },
-  { group: "SPACE AND TAB", key: "d", name: "DUE", cmd: "due", on: "space" },
-  { group: "SPACE AND TAB", key: "k", name: "SIGN-OFF", cmd: "signoff", on: "space" },
+  { group: "SPACE AND TAB", key: "l", name: "LAB", cmd: "lab" },
+  { group: "SPACE AND TAB", key: "e", name: "PURPOSE", cmd: "purpose" },
+  { group: "SPACE AND TAB", key: "d", name: "DUE", cmd: "due" },
+  { group: "SPACE AND TAB", key: "k", name: "SIGN-OFF", cmd: "signoff" },
   { group: "SPACE AND TAB", key: "u", name: "CLOSE UP", cmd: "closeup" },
-  { group: "SPACE AND TAB", key: "r", name: "RENAME TAB", cmd: "renametab", action: "tab.rename", on: "tab" },
+  { group: "SPACE AND TAB", key: "R", name: "RENAME TAB", cmd: "renametab", action: "tab.rename" },
+  { group: "MORE", key: "o", name: "FOLDER", cmd: "folder" },
   { group: "MORE", key: "x", name: "TERM", cmd: "term" },
   { group: "MORE", key: "h", also: "?", name: "HELP", cmd: "help" },
   { group: "MORE", key: "⌃G", name: "CANCEL", cancel: true },

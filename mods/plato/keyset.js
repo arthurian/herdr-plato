@@ -1,4 +1,4 @@
-// The PLATO keyset: NEXT BACK NEXT1 BACK1 JUMP AGENDA FOCUS LAB TERM HELP as boxed keys along the
+// The PLATO keyset: NEXT BACK NEXT1 BACK1 JUMP REVIEW FOCUS LAB TERM HELP as boxed keys along the
 // bottom. In FOCUS, a flashing SIGNAL line above them names an agent that needs you.
 
 import { div } from "gpui-kit";

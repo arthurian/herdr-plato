@@ -1,7 +1,7 @@
 // The sign role: the sign-on and sign-off pages, as a modal dialog that the route role opens.
 //   props { role: "sign", page: "on" | "off" | "up" | "purpose" | "due", space, text, letter } (up: CLOSE UP the line)
 // Sign-on shows the letter the new space will take (the first free slot; → or a click
-// puts it at the end of the line instead; a free letter typed in the agenda comes as
+// puts it at the end of the line instead; a free letter from the line's right-click menu comes as
 // props.letter and is taken instead of the first free slot), the space name line, an
 // optional folder (typed, or chosen with choose… or cmd-o, which open the system folder
 // picker) and an optional due date. Only the typed folder is checked; an empty folder
@@ -47,7 +47,7 @@ export default class Sign {
     this.dueFor = { letter: p.letter ?? null, name: p.name ?? "" };
     this.purposeFor = { terminal: p.terminal ?? null, code: p.code ?? "", label: p.label ?? "" };
     this.space = p.space ?? null;
-    this.fixed = p.letter ?? null; // a free letter chosen in the agenda
+    this.fixed = p.letter ?? null; // a free letter chosen on the line
     this.opened = Date.now();
     this.done = false;
     this.msg = "";
@@ -108,7 +108,7 @@ export default class Sign {
     return signOnLetters(shared(LINE) ?? null);
   }
 
-  /** The agenda's chosen letter, while it is still free. */
+  /** The chosen letter, while it is still free. */
   chosen() {
     const slot = this.fixed && (shared(LINE)?.slots ?? []).find((s) => s.letter === this.fixed);
     return slot && !slot.space ? this.fixed : null;
@@ -353,7 +353,7 @@ export default class Sign {
     const due = parseDue(this.fields[2].text, Date.now());
     let where;
     if (!letter) where = "All 26 letters are in use. Sign off a space first.";
-    else if (!this.end && this.chosen()) where = `Signing on at ${letter}, the free letter you chose in the agenda${l.end ? ` · → puts it at the end as ${l.end}` : ""}`;
+    else if (!this.end && this.chosen()) where = `Signing on at ${letter}, the free letter you chose${l.end ? ` · → puts it at the end as ${l.end}` : ""}`;
     else if (this.end || !l.free) where = `Signing on at ${letter}, the end of the line${l.free ? ` · ← fills the free ${this.chosen() ?? l.free} instead` : ""}`;
     else where = `Signing on at ${letter}, the first free letter${l.end ? ` · → puts it at the end as ${l.end}` : ""}`;
     const f = this.found?.key === raw ? this.found : null;

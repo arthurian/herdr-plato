@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { stops } from "../line.js";
-import { activityWords, codeCandidates, enterCode, hoverDetail, jumpCode, jumpGroupStep, jumpList, letterColumns, lookCard, lookStep, matchSegs, signalRows, stateSince, tabState, tabTotals } from "../overview.js";
+import { activityWords, codeCandidates, enterCode, hoverDetail, jumpCode, jumpGroupStep, jumpList, letterColumns, lookCard, lookStep, matchSegs, signalRows, stateSince, tabState, tabTotals, runningRows } from "../overview.js";
 
 // a: one tab; b: free; c: three tabs, the third split; d: one tab
 const tab = (id, index, extra = {}) => ({ id, index, name: String(index), named: false, status: null, settled: false, changed_at: null, working_since: null, ...extra });
@@ -80,6 +80,22 @@ test("tabTotals: spaces, free letters, tabs, states, longest running, oldest idl
   assert.equal(t.longest.since, 500);
   assert.equal(t.oldestIdle.stop.code, "d1");
   assert.equal(tabTotals(null, [], []).spaces, 0);
+});
+
+test("runningRows: working agents longest first, with purpose, time and progress; then the idle line", () => {
+  const M = 60000, now = 500 + 65 * M;
+  const labels = new Map([["x31", { "plato.purpose": "Fix the API", "plato.purpose_at": "1", "plato.step": "Bash: npm test", "plato.step_at": "2", "plato.tasks": "3/7" }]]);
+  const r = runningRows(ALL, SPACES, labels, now);
+  assert.deepEqual(r.rows, [{ code: "c1", words: "Fix the API", time: "1h 05m", tasks: "3/7" }]);
+  assert.equal(r.idle, "3 idle · oldest d1 · 1h 05m");
+});
+
+test("runningRows: no purpose shows the tab's name; no progress is empty; none working", () => {
+  const r = runningRows(ALL, SPACES, new Map(), 600);
+  assert.deepEqual(r.rows.map((x) => [x.code, x.tasks]), [["c1", ""]]);
+  assert.equal(r.rows[0].words, ALL.find((s) => s.code === "c1").label);
+  const none = runningRows([], [], new Map(), 0);
+  assert.deepEqual(none, { rows: [], idle: "none idle" });
 });
 
 test("activityWords: time run today and when the slot was last active", () => {
@@ -167,9 +183,9 @@ test("matchSegs: each word lights its first match, ignoring case", () => {
   assert.deepEqual(matchSegs("", ["a"]), []);
 });
 
-// ---- Paging: Herdr's agenda panel does not scroll sideways, so it shows the columns that fit ----
+// ---- Paging: Herdr's panels do not scroll sideways, so it shows the columns that fit ----
 
-// ---- In the agenda, a typed code selects a card; Enter goes ----
+// ---- A typed code selects a card; Enter goes ----
 
 test("hoverDetail: a hovered tab's code and names, purpose with its source, and state time, for the readout", () => {
   const stop = { code: "b2", spaceName: "dune", label: "tests", program: "claude", status: "blocked" };

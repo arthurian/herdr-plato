@@ -8,6 +8,9 @@
 //   { t, e: "line", l: "d", n: "docs" }   a space took letter d (n null: d went free)
 //   { t, e: "agent", a: "t7", c: "d1", s: "working" }   an agent's state (s null: it went away)
 //   { t, e: "focus", c: "d1" }            the stop you are at (c null: none)
+//   { t, e: "label", a: "t7", c: "d1", k: "plato.done", v: "fixed tests" }   a tab's logged label
+//                                         or its folder (k "cwd"); v null: it went away
+// A blocked agent event also carries st, the cut step (cutStep). Old day files have no labels.
 // Each "open" is followed by a snapshot of everything, so a session never needs the one before.
 
 const HOUR = 3600000;
@@ -29,26 +32,58 @@ export function dayStart(ms) {
   return d.getTime();
 }
 
+/** The labels the day record keeps (never plato.first, plato.last or the full plato.step). */
+export const LOGGED_LABELS = ["plato.session", "plato.session_how", "plato.done", "plato.done_at", "plato.purpose", "plato.purpose_yours", "plato.purpose_at", "plato.tasks"];
+
+/** The step an agent waits on, cut so no private text is kept: the first two words of a Bash
+ *  command, else only the tool name. null for no step. */
+export function cutStep(step) {
+  if (!step) return null;
+  const m = /^Bash: (\S+(?: \S+)?)/.exec(step);
+  return m ? `Bash: ${m[1]}` : step.split(/[ :]/)[0];
+}
+
 /** What the timetable watches: the occupied letters, each agent's state and stop code,
- *  and the stop you are at. `stops` are line.js stops (code, terminal, status). */
-export function worldOf(line, spaces, stops, focusCode) {
+ *  the stop you are at, and each tab's logged labels and folder. `stops` are line.js stops
+ *  (code, terminal, status); `terms` is terminals() and `panes` is panes() from herdr. */
+export function worldOf(line, spaces, stops, focusCode, terms = [], panes = []) {
   const names = new Map(spaces.map((s) => [s.id, s.name]));
   const slots = {};
   for (const s of line?.slots ?? []) if (s.space && names.has(s.space)) slots[s.letter] = { space: s.space, name: names.get(s.space) };
-  const agents = {};
-  for (const p of stops) if (p.terminal && p.status) agents[p.terminal] = { c: p.code, s: p.status };
-  return { slots, agents, focus: focusCode ?? null };
+  const labels = new Map(terms.map((x) => [x.address, x.labels ?? {}]));
+  const cwds = new Map(panes.map((x) => [x.terminal, x.cwd]));
+  const agents = {}, tabs = {};
+  for (const p of stops) {
+    if (!p.terminal) continue;
+    const have = labels.get(p.terminal) ?? {};
+    const l = {};
+    for (const k of LOGGED_LABELS) if (typeof have[k] === "string") l[k] = have[k];
+    tabs[p.terminal] = { c: p.code, l, cwd: cwds.get(p.terminal) ?? null };
+    if (!p.status) continue;
+    agents[p.terminal] = { c: p.code, s: p.status };
+    if (p.status === "blocked") agents[p.terminal].st = cutStep(have["plato.step"]);
+  }
+  return { slots, agents, focus: focusCode ?? null, tabs };
 }
+
+// A tab's logged values by key: its folder, then its logged labels.
+const tabValues = (tab) => [["cwd", tab?.cwd ?? null], ...LOGGED_LABELS.map((k) => [k, tab?.l?.[k] ?? null])];
 
 /** The events that state the whole world at t: the start of a session ("open"), or of a new
  *  day while the app stays open (carry). */
 export function snapshot(world, t, carry = false) {
   const out = [carry ? { t, e: "open", carry: true } : { t, e: "open" }];
   for (const l of Object.keys(world.slots).sort()) out.push({ t, e: "line", l, n: world.slots[l].name });
-  for (const a of Object.keys(world.agents).sort()) out.push({ t, e: "agent", a, c: world.agents[a].c, s: world.agents[a].s });
+  for (const a of Object.keys(world.agents).sort()) out.push({ t, e: "agent", a, c: world.agents[a].c, s: world.agents[a].s, ...stOf(world.agents[a]) });
+  for (const a of Object.keys(world.tabs ?? {}).sort()) {
+    for (const [k, v] of tabValues(world.tabs[a])) if (v != null) out.push({ t, e: "label", a, c: world.tabs[a].c, k, v });
+  }
   if (world.focus) out.push({ t, e: "focus", c: world.focus });
   return out;
 }
+
+// The cut step of a blocked agent, as event fields (none when it has none).
+const stOf = (x) => (x.s === "blocked" && x.st ? { st: x.st } : {});
 
 const union = (a, b) => [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
 
@@ -63,9 +98,13 @@ export function changes(prev, cur, t) {
   for (const a of union(prev.agents, cur.agents)) {
     const x = prev.agents[a], y = cur.agents[a];
     if (!y) out.push({ t, e: "agent", a, c: x.c, s: null });
-    else if (!x || x.s !== y.s || x.c !== y.c) out.push({ t, e: "agent", a, c: y.c, s: y.s });
+    else if (!x || x.s !== y.s || x.c !== y.c || (y.s === "blocked" && (x.st ?? null) !== (y.st ?? null))) out.push({ t, e: "agent", a, c: y.c, s: y.s, ...stOf(y) });
   }
   if (prev.focus !== cur.focus) out.push({ t, e: "focus", c: cur.focus });
+  for (const a of union(prev.tabs ?? {}, cur.tabs ?? {})) {
+    const x = prev.tabs?.[a], y = cur.tabs?.[a], before = new Map(tabValues(x));
+    for (const [k, v] of tabValues(y)) if (before.get(k) !== v) out.push({ t, e: "label", a, c: (y ?? x).c, k, v });
+  }
   return out;
 }
 
@@ -132,20 +171,6 @@ export function sessions(events, now, live = true) {
     out.push(cur);
   }
   return out;
-}
-
-/** The parts of [from, to] outside every session: the app was closed (not recorded). */
-export function gaps(ses, from, to) {
-  const out = [];
-  let at = from;
-  for (const s of ses) {
-    if (s.to <= at) continue;
-    if (s.from > at) out.push({ from: at, to: Math.min(s.from, to) });
-    at = Math.max(at, s.to);
-    if (at >= to) break;
-  }
-  if (at < to) out.push({ from: at, to });
-  return out.filter((g) => g.to > g.from);
 }
 
 /** Replays the events, calling span(from, to, state) for each stretch of time the app was
@@ -215,64 +240,6 @@ export function build(events, now, live = true) {
   return { rows, path, sessions: sessions(events, now, live) };
 }
 
-/** The day by space name, for the agenda: per letter and the name of the space it held, the
- *  stretches when an agent there ran or waited on you, and the stretches you were there.
- *  A letter that changes space keeps each space's time apart. Idle time is left out.
- *  { [letter]: { [name]: { segs: [{ from, to, kind: "ran" | "wait" }], you: [{ from, to }] } } } */
-export function daySegs(events, now, live = true) {
-  const out = {};
-  const entry = (l, n) => ((out[l] ??= {})[n] ??= { segs: [], you: [] });
-  replay(events, now, live, (from, to, st) => {
-    for (const [l, n] of Object.entries(st.slots)) {
-      const kind = slotKind(st.agents, l);
-      if (kind !== "idle") add(entry(l, n).segs, { from, to, kind }, (a, b) => a.kind === b.kind);
-    }
-    const fl = st.focus?.[0];
-    if (fl && st.slots[fl]) add(entry(fl, st.slots[fl]).you, { from, to }, () => true);
-  });
-  return out;
-}
-
-// daySegs for one events array, kept for the minute: the agenda draws on every change in Herdr,
-// and Herdr stops a draw that takes too long. A new array (the file read again) or a new minute
-// replays it.
-const SEGS = new WeakMap();
-/** daySegs, kept by the events array for the current minute. */
-export function daySegsCached(events, now, live = true) {
-  const minute = Math.floor(now / 60000);
-  const hit = SEGS.get(events);
-  if (hit && hit.minute === minute && hit.live === live) return hit.segs;
-  const segs = daySegs(events, now, live);
-  SEGS.set(events, { minute, live, segs });
-  return segs;
-}
-
-/** A daySegs entry's ran, waited and your time (ms). A missing entry is all zero. */
-export function segTotals(entry) {
-  const t = { ran: 0, wait: 0, you: 0 };
-  for (const s of entry?.segs ?? []) t[s.kind] += s.to - s.from;
-  for (const s of entry?.you ?? []) t.you += s.to - s.from;
-  return t;
-}
-
-/** The agenda's TODAY axis: from the start of the hour of the first session today (midnight for
- *  a session from yesterday, the hour before now with none) to now, with every whole hour in it. */
-export function dayAxis(ses, now) {
-  const first = ses.length ? Math.max(dayStart(now), Math.min(...ses.map((s) => s.from))) : now - HOUR;
-  const d = new Date(first);
-  d.setMinutes(0, 0, 0);
-  const from = d.getTime();
-  const hours = [];
-  for (let h = from; h <= now; h += HOUR) hours.push(h);
-  return { from, to: now, hours };
-}
-
-/** Where t falls on an axis drawn height px tall: whole px from the top, clamped to the box. */
-export function yAt(axis, height, t) {
-  const span = Math.max(1, axis.to - axis.from);
-  return Math.round(Math.min(1, Math.max(0, (t - axis.from) / span)) * height);
-}
-
 const MIN = 60000;
 const SPAN = 2 * HOUR;   // the window: the last two hours of recorded time, unless chosen
 /** How many days of day files TODAY keeps; older ones are deleted when it starts. */
@@ -283,6 +250,22 @@ export const KEEP_DAYS = 60;
 export function oldDayFiles(names, now, keep = KEEP_DAYS) {
   const cutoff = dayKey(now - keep * 24 * HOUR);
   return names.filter((n) => /^\d{4}-\d{2}-\d{2}\.json$/.test(n) && n.slice(0, 10) < cutoff).sort();
+}
+
+/** The dated folders (YYYY-MM-DD) in a folder listing that are older than keep days before
+ *  now. Other names are never included. */
+export function oldPostFolders(names, now, keep = KEEP_DAYS) {
+  const cutoff = dayKey(now - keep * 24 * HOUR);
+  return names.filter((n) => /^\d{4}-\d{2}-\d{2}$/.test(n) && n < cutoff).sort();
+}
+
+/** How long one write of the day file may run. Each write holds the whole day, so the
+ *  recorder can drop a write that never ends and let the next one save everything. */
+export const WRITE_MS = 10000;
+
+/** A write that started at `at` (null: none is running) is stuck at `now`. */
+export function writeStuck(at, now) {
+  return at != null && now - at > WRITE_MS;
 }
 
 /** The windows TODAY steps through on a click: the last 2, 6, 12 or 24 hours. */

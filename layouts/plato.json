@@ -23,8 +23,8 @@
                       "focus": { "width": 1, "color": "accent" }, "lone": true,
                       "header": { "content": { "mod": "plato", "props": { "role": "strip" } }, "height": 28,
                                   "position": "bottom", "reveal": "always" } } }} ] },
-        { "id": "agenda-view", "type": "block",
-          "content": { "mod": "plato", "props": { "role": "route", "mode": "agenda" } } } ] },
+        { "id": "review-view", "type": "block",
+          "content": { "mod": "plato", "props": { "role": "review" } } } ] },
         { "id": "right", "type": "column", "size": { "px": 280 }, "min": 200,
           "children": [
             { "id": "signals", "type": "block", "size": { "px": 150 }, "content": { "mod": "plato", "props": { "role": "signals", "mode": "signals" } } },
@@ -33,7 +33,7 @@
               { "id": "box-line", "type": "column", "children": [
                 { "id": "timetable", "type": "block", "size": { "px": 272 }, "content": { "mod": "plato", "props": { "role": "timetable" } } },
                 { "id": "files", "type": "block", "content": { "mod": "plato", "props": { "role": "files" } } } ] },
-              { "id": "box-agenda", "type": "block", "content": { "mod": "plato", "props": { "role": "signals", "mode": "due" } } } ] } ] } ] },
+              { "id": "box-due", "type": "block", "content": { "mod": "plato", "props": { "role": "signals", "mode": "due" } } } ] } ] } ] },
     { "id": "keyset", "type": "block", "size": { "px": 32 },
       "content": { "mod": "plato", "props": { "role": "keyset" } } }
   ]

@@ -66,7 +66,7 @@ export function findNode(layout, id) {
 }
 
 /** The keyset's padding, so its keys center under the terminal and not the whole window:
- *  the route's width on the left while the line shows (not in the agenda), and the right
+ *  the route's width on the left while the line shows (not over REVIEW), and the right
  *  column's width unless FOCUS hides it. */
 export function keysetPad(layout) {
   const px = (n) => (n && !n.hidden && typeof n.size?.px === "number" ? n.size.px : 0);
@@ -80,7 +80,7 @@ export const ROUTE_PX = 260;
 export const ROUTE_SLIM_PX = 56;
 
 /** FOCUS: hide the right column and narrow the route, or undo both when focus is on.
- *  The route stays shown, or NEXT, BACK, NEXT1 and the agenda (its commands) would stop. */
+ *  The route stays shown, or NEXT, BACK, NEXT1 and REVIEW (its commands) would stop. */
 export function focusCommands(focusOn) {
   const name = focusOn ? "layout.show" : "layout.hide";
   return [[name, { id: "right" }], ["layout.resize", { id: "route", px: focusOn ? ROUTE_PX : ROUTE_SLIM_PX }]];
@@ -108,7 +108,7 @@ const KEY_ROWS = [
   ["BACK", { cmd: "back" }, "Go to the tab before this one on the line."],
   ["NEXT1", { cmd: "next1" }, "Go to the agent that has waited longest for you."],
   ["BACK1", { cmd: "back1" }, "Return to where you were before."],
-  ["AGENDA", { cmd: "agenda" }, "Show each space's day: TODAY's hours, or the WEEK."],
+  ["REVIEW", { cmd: "review" }, "Show the day: results, posts and facts."],
   ["JUMP", { cmd: "jump" }, "Find a tab by its code, name or purpose."],
   ["TREE", { cmd: "tree" }, "Show every space's tabs on the route, as a tree."],
   ["PICKER", { action: "mod.open:picker" }, "Herdr's picker: find a tab by its name."],
@@ -120,6 +120,7 @@ const KEY_ROWS = [
   ["LAB", { cmd: "lab" }, "Add a tab to this space."],
   ["PURPOSE", { cmd: "purpose" }, "Set what this tab is for."],
   ["DUE", { cmd: "due" }, "Set or clear this space's due date."],
+  ["FOLDER", { cmd: "folder" }, "Open this tab's folder in the file manager."],
   ["TERM", { cmd: "term" }, "Herdr's command palette: any command by name."],
   ["GLOW", { cmd: "glow" }, "Step the glow: four modern, four classic."],
   ["FOCUS", { cmd: "focus" }, "Narrow the route and hide the right column."],
@@ -136,7 +137,7 @@ const WORD_ROWS = [
   ["WAITING", "", "A space with an agent that needs you. SIGNALS, at the top right, lists them in NEXT1 order."],
   ["the route", "", "The dashed line shows where NEXT1 goes. The ▼ on the line shows where NEXT goes."],
   ["SIGNAL", "", "In FOCUS, a flashing line above the keys names another agent that needs you. Press NEXT1."],
-  ["in the agenda", "", "Tab switches TODAY and WEEK. The arrows move the ▶ cursor, and Enter goes to its tab. The Space bar opens LOOK for that tab before you go. LAB, SIGN-OFF and SET DUE act on its space. Esc closes the agenda."],
+  ["in REVIEW", "", "Tab switches between DAY and COMMENTS. The arrows pick a result on DAY or a comment on COMMENTS, and Enter goes to its tab. The Space bar opens LOOK for that tab before you go. c copies the note. ← and → show another day. Esc closes REVIEW."],
   ["JUMP", "", "Type a code, a name, a purpose or a folder. Enter goes to the lit row. Tab shows one group. Esc closes."],
   ["purpose", "", "What a tab is for, on its strip, in LOOK and in JUMP. Yours (set with PURPOSE) comes first, then the agent's, then the session's first prompt."],
 ];
@@ -156,8 +157,8 @@ export function helpKey(i, key, n) {
   return null;
 }
 
-/** The right-click menu of a space (its square or name on the route, its column head in
- *  the agenda): [{ id, name, key }], each item a PLATO key that already exists. key is { cmd }
+/** The right-click menu of a space (its square or name on the route):
+ *  [{ id, name, key }], each item a PLATO key that already exists. key is { cmd }
  *  for a PLATO command, { action } for a Herdr command, or { text } for a plain key. A free
  *  letter offers SIGN-ON there. CLOSE UP shows only while the line has free letters. */
 export function spaceMenu({ free, freeLetters }) {
@@ -173,15 +174,21 @@ export function spaceMenu({ free, freeLetters }) {
   return items;
 }
 
-/** The right-click menu of a tab (a route row or dot, an agenda card). GO is left out where you
- *  already are. LOOK is the agenda's Space bar, so only the agenda shows that key for it. */
-export function tabMenu({ current, inAgenda }) {
+/** The right-click menu of a tab (a route row or dot). GO is left out where you already are. */
+export function tabMenu({ current }) {
   const items = [];
   if (!current) items.push({ id: "go", name: "GO", key: { text: "↩" } });
-  items.push({ id: "look", name: "LOOK", key: { text: inAgenda ? "space" : "" } });
+  items.push({ id: "look", name: "LOOK", key: { text: "" } });
   items.push({ id: "rename-tab", name: "RENAME TAB", key: { action: "tab.rename" } });
   items.push({ id: "purpose", name: "SET PURPOSE…", key: { cmd: "purpose" } });
+  items.push({ id: "folder", name: "FOLDER", key: { cmd: "folder" } });
   return items;
+}
+
+/** The command that opens a folder in the file manager of the OS (as Herdr's window().platform
+ *  names it): Finder on macOS, Explorer on Windows, the desktop's default (xdg-open) elsewhere. */
+export function folderOpener(os) {
+  return os === "macos" ? "open" : os === "windows" ? "explorer" : "xdg-open";
 }
 
 /** Enter belongs to a dialog unless cmd is held: the cmd-enter chords are layout keys (NEXT
@@ -199,7 +206,7 @@ export function moveHeld(c, open) {
 }
 
 /** How often an open dialog reports its sign of life, and how long it counts as open after
- *  the last one. Herdr closes a dialog on Esc without telling the mod, so the agenda takes the
+ *  the last one. Herdr closes a dialog on Esc without telling the mod, so REVIEW takes the
  *  keyboard back only once the dialog counts as closed: keys before that are lost. Short, but
  *  room for two missed beats, so a slow frame never closes an open dialog. */
 export const BEAT_MS = 250;
@@ -244,7 +251,7 @@ export function noticeStale(notice, now) {
 }
 
 /** Whether the keys panel closed without running a row (Esc, ctrl-g, an undefined key, a
- *  click beside it) since the agenda saw it open: then the agenda takes the keyboard back.
+ *  click beside it) since REVIEW saw it open: then REVIEW takes the keyboard back.
  *  back: shared plato.keys.back { at }. A row may open a dialog, so then it does not. */
 export function keysGaveBack(back, since) {
   return Boolean(back) && back.at >= since;

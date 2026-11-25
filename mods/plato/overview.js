@@ -1,9 +1,10 @@
-// What TREE, JUMP, LOOK, SIGNALS, the agenda and the hover detail share, as pure functions:
+// What TREE, JUMP, LOOK, SIGNALS, REVIEW and the hover detail share, as pure functions:
 // one column per letter, the code you type, the state of a tab, the signals and totals,
 // LOOK's card and JUMP's list. No "herdr" import, so Node can test it (test/overview.test.mjs).
 
 import { signalList, tabCount, purposeOf, purposeSource, purposeLines, duration } from "./line.js";
 import { dueWords } from "./day.js";
+import { stepWords } from "./stripdata.js";
 
 /** One column per slot of the line, in letter order: { letter, free, space, name, closed,
  *  was, stops }. A free letter keeps its column, so the others never slide sideways. */
@@ -72,6 +73,23 @@ export function tabTotals(line, all, spaces) {
   return t;
 }
 
+/** RUNNING, under DUE while REVIEW is open: the working agents now, longest running first, each
+ *  { code, words (your purpose, else the tab's name), time (running for), tasks (progress, as on
+ *  the pane strip, or "") }, and one idle line: "3 idle · oldest d1 · 1h 05m" or "none idle".
+ *  labels: terminal -> its labels. */
+export function runningRows(all, spaces, labels, now) {
+  const t = tabTotals(null, all, spaces);
+  const rows = all.filter((s) => tabState(s.status) === "working")
+    .map((s) => ({ s, since: stateSince(s, spaces) }))
+    .sort((x, y) => (x.since ?? Infinity) - (y.since ?? Infinity))
+    .map(({ s, since }) => {
+      const l = (s.terminal && labels.get(s.terminal)) || {};
+      return { code: s.code, words: purposeOf(l)?.text || s.label, time: duration(since, now), tasks: stepWords(l, "working")?.tasks ?? "" };
+    });
+  const idle = t.idle ? `${t.idle} idle${t.oldestIdle ? ` · oldest ${t.oldestIdle.stop.code} · ${duration(t.oldestIdle.since, now)}` : ""}` : "none idle";
+  return { rows, idle };
+}
+
 /** A space's day in words, for its summary line, from the timetable's graph (day.js build:
  *  row.segs, each { from, to, kind: "ran" | "idle" | "wait" }): "ran 1h 40m today · last
  *  active 3m ago". "ran" counts the time any agent there was working. "last active" is the end
@@ -95,7 +113,7 @@ export function span(ms) {
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 }
 
-/** A hovered tab's detail, for the readout of the route or the agenda: { title, purpose (at
+/** A hovered tab's detail, for the readout of the route: { title, purpose (at
  *  most two lines of perLine characters), source, program, status, time }, in the words of
  *  the strip and NOW AT. since: when the state began (stateSince), or null. */
 export function hoverDetail(stop, purpose, since, now, perLine) {

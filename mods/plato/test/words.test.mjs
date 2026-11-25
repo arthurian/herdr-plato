@@ -82,7 +82,7 @@ for (const mod of mods) {
 // anywhere in a mod's code fails, inside a camelCase name too. Names that come from
 // Herdr or GPUI do not count.
 const RAILWAY = /station|platform|vacan|roundel|track|yard/i;
-const HERDR_NAMES = [/\b(m|mods|modifiers|e\.modifiers)\??\.platform\b/g, /platform: (true|false)/g, /track_focus/g, /track_scroll/g];
+const HERDR_NAMES = [/\b(m|mods|modifiers|e\.modifiers)\??\.platform\b/g, /platform: (true|false)/g, /window\(\)\??\.platform\b/g, /track_focus/g, /track_scroll/g];
 
 /** The railway words in a mod's code and tests, as "file:line: text". */
 function names(mod) {

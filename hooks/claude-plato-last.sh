@@ -15,6 +15,13 @@ command -v hc >/dev/null 2>&1 || exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 input=$(cat)
 p=$(printf '%s' "$input" | jq -j '.prompt // empty' 2>/dev/null | tr '\n\r\t' '   ' | cut -c1-120)
+# Claude Code also runs this hook for turns it starts itself: a subagent's report, another
+# session's message, a task notification. Their prompt opens with a wrapper tag, and they are
+# not the person's prompt, so they change nothing. (The hook input has no field for this.)
+case ${p#"${p%%[! ]*}"} in
+  '<agent-message '* | '<agent-message>'* | '<cross-session-message '* | '<cross-session-message>'* | \
+    '<task-notification>'* | '<teammate-message '* | '<teammate-message>'*) exit 0 ;;
+esac
 now=$(date +%s)
 set -- "plato.last=$p" "plato.last_at=$now"
 sid=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null | tr -cd 'A-Za-z0-9_-' | cut -c1-80)

@@ -370,7 +370,7 @@ export function signOnLetters(line) {
 export function closeUp(line, now) {
   const slots = (line?.slots ?? []).filter((s) => s.space).map((s, i) => {
     const n = { ...s, letter: LETTERS[i] };
-    // letter_at stays (moved_* go after a day): the agenda counts a letter's time for this
+    // letter_at stays (moved_* go after a day): the day record counts a letter's time for this
     // space only from here, so the space that had the letter before is not mixed in.
     if (n.letter !== s.letter) Object.assign(n, { moved_from: s.letter, moved_at: now, letter_at: now });
     return n;
