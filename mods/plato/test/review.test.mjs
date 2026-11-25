@@ -42,7 +42,7 @@ test("review: one git call at a time, with the strip's 5 s timeout", () => {
 test("review: every key in the key line is also a click", () => {
   assert.match(method("cap"), /\.on_click\(/, "a key cap is a click");
   const line = method("keyLine");
-  assert.match(line, /reviewKeys\(this\.model\.empty \? "day" : this\.page\)/);
+  assert.match(line, /reviewKeys\(this\.model\.empty \? "day" : this\.page, this\.bandOpen\)/);
   assert.match(line, /this\.cap\(/);
   assert.doesNotMatch(line, /\.child\(k\)/, "a key is never drawn as plain text");
   const act = method("act");
@@ -111,20 +111,20 @@ test("review: Tab switches the page, resets the pick and keeps the day", () => {
 test("review: REVIEW opens on the DAY page, and picks follow the page", () => {
   assert.match(code, /this\.openAt = open\.at;\n\s*this\.page = open\.page === "comments" \? "comments" : "day";/, "day unless a script named comments");
   assert.match(code, /this\.want = open\.day \?\? null;[\s\S]{0,120}this\.load\(cx, this\.want\)/, "a script can name the day");
-  assert.match(method("items"), /onDay \? this\.model\.resultTabs : this\.model\.comments/);
+  assert.match(method("items"), /onDay \? this\.model\.resultRows : this\.commentPicks\(\)/);
 });
 
 test("review: ↑↓ keep the pick in view on both pages", () => {
   assert.match(method("act"), /return this\.reveal\(\);/);
   const reveal = method("reveal");
-  assert.match(reveal, /this\.resultScroll\.scroll_to_item\(this\.sel === 0 \? 0 : this\.sel \+ 1\)/, "the heading is child 0 of the results column");
-  assert.match(reveal, /this\.commentScroll\.scroll_to_item\(this\.sel\)/, "letters are the only children of their list");
+  assert.match(reveal, /this\.resultScroll\.scroll_to_item\(this\.sel === 0 \? 0 : this\.model\.resultRows\[this\.sel\]\?\.scrollTo \?\? 0\)/, "the heading is child 0 of the results column; a row scrolls to its place, or its group's heading");
+  assert.match(reveal, /this\.commentScroll\.scroll_to_item\(Math\.max\(0, this\.sel - this\.noteOff\(\)\)\)/, "comments are the only children of their list; the note above it is pick 0 when there is one");
 });
 
 test("review: a reload keeps the pick on the same result or comment", () => {
   assert.match(code, /const was = fresh \? null : this\.items\(\)\[this\.sel\]\?\.key;/);
   assert.match(code, /items\.findIndex\(\(x\) => x\.key === was\)/);
-  assert.match(method("items"), /key: onDay \? `\$\{x\.code\}\|\$\{x\.a\}` : `\$\{x\.time\}\|\$\{x\.a\}`/);
+  assert.match(method("items"), /key: onDay \? `\$\{x\.code\}\|\$\{x\.a\}\|\$\{x\.at\}` : `\$\{x\.time\}\|\$\{x\.a\}`/, "one row per result: the result's time keeps rows of one tab apart");
 });
 
 test("review: TIMELINE grows only without results; the page names show a page", () => {
@@ -133,9 +133,10 @@ test("review: TIMELINE grows only without results; the page names show a page", 
 });
 
 test("review: a result's text and its full report use the theme's text color, not the accent", () => {
-  const results = method("results");
-  assert.match(results, /div\(\)\.text_color\(C\.text\)\.child\(h\.words\.facts\)/);
-  assert.match(results, /div\(\)\.text_color\(C\.text\)\.child\(h\.words\.report\)/);
+  const row = method("resultRow");
+  assert.match(row, /text_color\(C\.text\)[^\n]*\.child\(h\.words\.mark \? `\$\{h\.words\.mark\} \$\{h\.words\.v\}` : h\.words\.v\)/, "only ✕ shows; a plain result has no mark");
+  assert.match(row, /div\(\)\.text_color\(C\.text\)\.child\(h\.words\.facts\)/);
+  assert.match(row, /div\(\)\.text_color\(C\.text\)\.child\(h\.words\.report\)/);
 });
 
 test("review: the note's by-line starts with its kind, so it reads \"note · \"", () => {
@@ -158,7 +159,7 @@ test("review: the quiet spaces count every active tab, not only the results", ()
 
 test("review: a bar that belongs to no result has no click and no pointer", () => {
   const band = method("band");
-  assert.match(band, /const n = bandHit\(m\.resultTabs, h\);/);
+  assert.match(band, /const n = bandHit\(m\.resultRows, h\);/);
   assert.match(band, /\.when\(n >= 0, \(el\) => el\.cursor_pointer\(\)\.on_click\(/);
 });
 
@@ -172,7 +173,7 @@ test("review: the comments live only on COMMENTS; the page name counts them", ()
 
 test("review: a day with no record has no pages", () => {
   assert.match(method("act"), /case "tab":[\s\S]{0,120}if \(this\.model\.empty\) return;/);
-  assert.match(method("keyLine"), /reviewKeys\(this\.model\.empty \? "day" : this\.page\)/);
+  assert.match(method("keyLine"), /reviewKeys\(this\.model\.empty \? "day" : this\.page, this\.bandOpen\)/);
 });
 
 test("review: the DIRECTOR line sits under the header on DAY only, one line, and a click opens COMMENTS", () => {
@@ -197,4 +198,32 @@ test("review: Tab and Shift-Tab switch the page, not the window's focus", () => 
   const render = method("render");
   assert.match(render, /\.key_context\("PlatoReview"\)/, "the page declares the context");
   assert.match(render, /\.on_action\("plato-review-page", \(_e, cx\) => \{ this\.act\("tab", cx\); cx\.notify\(\); \}\)/, "the action switches the page");
+});
+
+test("review: t and a click on the TIMELINE line fold the timeline, and the columns take its height", () => {
+  assert.match(method("act"), /case "t":[\s\S]{0,160}this\.bandOpen = !this\.bandOpen;/);
+  assert.match(code, /this\.bandOpen = true;/, "the timeline starts open");
+  const render = method("render");
+  assert.match(render, /this\.bandOpen \? this\.band\(m\) : this\.bandShut\(\)/);
+  assert.match(method("bandShut"), /\.on_click\(/);
+  assert.match(method("bandShut"), /REVIEW_WORDS\.timelineHidden/);
+  assert.match(method("band"), /id\("review-band-head"\)[\s\S]{0,200}\.on_click\(/, "a click on the open timeline's heading folds it");
+  assert.match(method("keyLine"), /k\.id !== "band"/, "a day with no record has no timeline key");
+});
+
+test("review: c copies the picked result, comment or note", () => {
+  const act = method("act");
+  assert.match(act, /case "c": \{[\s\S]{0,400}cx\.write_to_clipboard\(text\)/);
+  assert.match(method("copyText"), /resultCopyText\(/);
+  assert.match(method("copyText"), /commentCopyText\(/);
+  assert.match(method("copyText"), /this\.model\.note\.text/);
+  assert.match(method("commentPicks"), /this\.model\.note \? \[\{ code: null, a: null, note: true/, "the note is the first pick on COMMENTS");
+  assert.match(method("note"), /this\.pickable\(/, "the note is picked like a comment, with ▶ and a click");
+});
+
+test("review: a space heading has the route's letter box, more room above it, and its count", () => {
+  const results = method("results");
+  assert.match(results, /\.pt\(10\)/, "10 px above a heading, so it sits with its own rows");
+  assert.match(results, /w\(17\)\.h\(17\)[\s\S]{0,120}border_1\(\)\.border_color\(C\.fg\)/, "the letter in a box, as on the route");
+  assert.match(results, /resultCountWords\(g\.rows\.length\)/);
 });

@@ -263,18 +263,19 @@ FILES shows the folder tree of the project you are in, which is the git root of 
 
 REVIEW (`cmd-shift-r`) is THE PLATO REVIEW, the review of your day. It covers the route and the terminal, and it answers one question: what did each space get done? Press `cmd-shift-r` again, Esc or `ctrl-g` to close it. `cmd-k r` opens it too.
 
-Before 12:00, REVIEW opens on the last day before today that has a record. From 12:00, it opens on today so far.
+REVIEW opens on today so far, from midnight local time. Press ← for an earlier day.
 
 REVIEW has two pages, DAY and COMMENTS. It opens on DAY. The title line names the day and the two pages. The name COMMENTS shows how many comments the day has, for example `COMMENTS 4`.
 
 Keys in REVIEW:
 
 - Tab and shift-Tab switch between DAY and COMMENTS. A click on a page name does the same.
-- ↑ and ↓ pick a result on DAY, or a comment on COMMENTS.
+- ↑ and ↓ pick a result on DAY. On COMMENTS, they pick the director's note, which comes first, or a comment.
 - The Space bar opens LOOK for the picked tab (see below).
 - Enter goes to the picked tab.
 - ← and → show the day before or after. PLATO keeps 60 days.
-- `c` copies the note.
+- `c` copies what is picked. A result copies with its tab code, purpose, time and report, a comment with its tab and time, and the note in full.
+- `t` hides TIMELINE on DAY, so RESULTS and the facts take its height, and shows it again. A click on the TIMELINE line does the same. REVIEW keeps your choice until Herdr quits.
 - `cmd-j` opens JUMP over REVIEW.
 - Esc, `ctrl-g` or `cmd-shift-r` closes REVIEW. Any move closes it first.
 
@@ -284,15 +285,18 @@ The key line under the page shows these keys, and a click on a key does what the
 
 The DIRECTOR line comes first. It shows the first sentence of the day's note on one line. Without a note, it reads `no note today`. A click on the line, or Tab, shows the whole note on COMMENTS.
 
-RESULTS lists each tab that got a result that day, newest result first. An entry looks like this:
+RESULTS lists every result of the day, one row each, grouped by space in the route's order. Each group starts with the space's letter in a box, as on the route, its name and its count of results, and its rows are newest first. A tab with three results has three rows. The picked row looks like this:
 
 ```
-▶ a1 Rate-limit the public API
-  ✓ fixed burst overflow · todo 6/6 · 2 commits   ◷ here 2h12 · waited 29m
+  [a] atlas                                   3 results
+▶ 16:05 a1 fixed burst overflow
+  Rate-limit the public API
+  todo 6/6 · 2 commits   ◷ here 2h12 · waited 29m
+  report · 16:06
   ✎ Limits now apply per key. Load test passes at 2x traffic.
 ```
 
-The first line is the tab's code and its purpose. The second line is the latest result, then the todo progress, the commits and your time at the tab. ✓ marks a result, and ✕ marks a task that was dropped. The third line is the agent's latest report, cut to one line. The picked entry, marked ▶, shows the whole report. A tab you closed and opened again with the same purpose shows once.
+Each row has the time of the result, the tab's code and the result. ✕ marks a task that was dropped. The picked row, marked ▶, also shows the tab's purpose, the todo progress, the commits, your time at the tab and the report that the agent posted with that result. A result older than the tab's purpose adds `before this purpose`. When rows are below the visible part of RESULTS, a dim line at its bottom right counts them, such as `3 more ↓`.
 
 Next to RESULTS:
 
@@ -302,15 +306,15 @@ Next to RESULTS:
 
 TIMELINE, at the bottom, has one row for each space across the day. A shaded bar shows where you were, and the number in it is the tab. A thin line shows where an agent worked, and an orange mark shows where an agent waited on you. ✓ marks each result, and `✓2` means two results close together. A hatched strip above the rows marks quick switching between tabs, with a count such as `×14`. On today's page, a bright line marks now.
 
-TIMELINE follows your pick in RESULTS. The picked tab's bars have a box around them, and the other bars dim. A click on a bar picks its result.
+TIMELINE follows your pick in RESULTS. The picked tab's bars have a box around them, and the other bars dim. A click on a bar picks the newest result of its tab.
 
-![REVIEW's DAY page for Wed 18 Nov, with COMMENTS 4 in the title line. Under it, the DIRECTOR line gives the note's first sentence: most of the day went to small fixes, and the migration plan waited two hours. RESULTS lists the tabs with a result, newest result first, with g1 "Review the API docs pull request" picked. Each entry shows its result, such as ✓ fixed burst overflow with todo 6/6, and one line of its report. c1 shows ✕ dropped shared cache layer. On the right, DONE has a bar for each verb, OPEN lists d2, and HOW IT WENT gives the sessions, switches, longest hold and waits. TIMELINE fills the lower half with rows a to g, and g1's bar has a box around it.](previews/review.png)
+![REVIEW's DAY page for Wed 18 Nov, with COMMENTS 4 in the title line. Under it, the DIRECTOR line gives the note's first sentence: most of the day went to small fixes, and the migration plan waited two hours. RESULTS groups the results by space: a atlas with 3 results, b ledger and c orbit with 1 each, and the heading of d harbor show, each letter in a box. The picked row, a1 at 16:05 "fixed burst overflow", also shows its purpose "Rate-limit the public API", todo 6/6, 2h12 here, and its report from 16:06. a has three rows, from a1 and a3, and c1 shows ✕ dropped shared cache layer. "3 more ↓" at the bottom right counts the rows below. On the right, DONE has a bar for each verb, OPEN lists d2, and HOW IT WENT gives the sessions, switches, longest hold and waits. TIMELINE fills the lower half with rows a to g, and a1's bars have a box around them.](previews/review.png)
 
 #### COMMENTS
 
-COMMENTS starts with the DIRECTOR'S NOTE, the day's note in full. Without one, this part is one dim line. Under it, COMMENTS lists every comment of the day, newest first, with its tab and its time. A comment is an agent's observation about how you work with it.
+COMMENTS starts with the DIRECTOR'S NOTE, the day's note in full. It is the first pick, so `c` copies it when COMMENTS opens. Without a note, this part is one dim line. Under it, COMMENTS lists every comment of the day, newest first, with its tab and its time. A comment is an agent's observation about how you work with it.
 
-![REVIEW's COMMENTS page for the same day. DIRECTOR'S NOTE comes first, in full, with its time and the mark shareable. COMMENTS lists four comments, newest first, each in a box with its tab and time. The picked one, from f1, says that giving the budget and the data size first let the agent rule out two choices in minutes. The others name a plan that waited two hours for an answer, a goal that changed halfway, and the same test command approved four times.](previews/comments.png)
+![REVIEW's COMMENTS page for the same day. DIRECTOR'S NOTE comes first, in full, with its time and the mark shareable. COMMENTS lists four comments, newest first, each in a box with its tab and time. The note is picked. The first comment, from f1, says that giving the budget and the data size first let the agent rule out two choices in minutes. The others name a plan that waited two hours for an answer, a goal that changed halfway, and the same test command approved four times.](previews/comments.png)
 
 #### Where the numbers come from
 

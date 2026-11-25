@@ -21,12 +21,11 @@ const pad = (n) => String(n).padStart(2, "0");
 const clock = (ms) => `${pad(new Date(ms).getHours())}:${pad(new Date(ms).getMinutes())}`;
 const secsToMs = (v) => (/^\d+$/.test(v ?? "") ? Number(v) * 1000 : null);
 
-/** The day the page opens on. Before 12:00, the newest day before today; from 12:00, today.
- *  null when no such day has a record. */
+/** The day the page opens on: today so far, from midnight local time. null when today has no
+ *  record yet. */
 export function openDay(dayKeys, now) {
   const today = dayKey(now);
-  if (new Date(now).getHours() >= 12) return dayKeys.includes(today) ? today : null;
-  return dayKeys.filter((k) => k < today).sort().pop() ?? null;
+  return dayKeys.includes(today) ? today : null;
 }
 
 /** The next day with a record from `from`, in dir (-1 earlier, 1 later); null at the end. */
@@ -523,19 +522,101 @@ export function sourcesLine({ hasLabels, hasPosts, hasGit, counting = false }) {
   return [...have, ...lack].join(" · ");
 }
 
-/** One result's words: head (code and purpose), facts (the latest result, todo progress,
- *  commits), the report's text with ✎, or null, and the report's time as HH:MM, or null. A
- *  result older than the tab's purpose belongs to the purpose before it, and says so. */
-export function resultTabWords(tab, commits, report) {
-  const last = tab.results[tab.results.length - 1];
+/** RESULTS as one row per result, newest first: { t (the tab, from resultTabs), tab (its place
+ *  in that list, which tells one tab's rows from another's), v, at }. Results at the same time
+ *  keep the tabs' order. */
+export function resultRows(listed) {
+  return listed.flatMap((t, tab) => t.results.map((r) => ({ t, tab, v: r.v, at: r.at })))
+    .sort((x, y) => y.at - x.at || x.tab - y.tab);
+}
+
+/** Each space letter's name on the day: the last name in its line events. */
+export function spaceNames(events) {
+  const names = new Map();
+  for (const e of events) if (e.e === "line" && e.n) names.set(e.l, e.n);
+  return names;
+}
+
+/** RESULTS by space, so the page still answers what each space got done: { letter, name, rows }
+ *  in letter order (the route's and TIMELINE's order), the rows newest first inside each. */
+export function groupRows(rows, names) {
+  const groups = new Map();
+  for (const r of rows) {
+    const l = r.t.letter ?? r.t.code?.[0] ?? "";
+    if (!groups.has(l)) groups.set(l, { letter: l, name: names.get(l) ?? "", rows: [] });
+    groups.get(l).rows.push(r);
+  }
+  return [...groups.values()].sort((x, y) => (x.letter < y.letter ? -1 : x.letter > y.letter ? 1 : 0));
+}
+
+/** The heights in RESULTS, in px: a one-line row (the page's line height), a space heading
+ *  (a line and 10 px above it, so it sits with its own rows), and the gap between the column's
+ *  children. */
+export const ROW_PX = 19, GROUP_PX = 29, GAP_PX = 6;
+
+/** How many result rows are in the hidden part at the bottom of RESULTS. kinds are the column's
+ *  children from the top: "row", "picked", "group" or "other" (the heading and the quiet line);
+ *  hidden is the px below the visible part. It counts from the bottom, a row that is partly
+ *  hidden too, and stops at the picked row, whose height it does not know. */
+export function rowsBelow(kinds, hidden) {
+  let left = hidden, n = 0;
+  for (let i = kinds.length - 1; i >= 0 && left > 1; i--) {
+    const k = kinds[i];
+    if (k === "row" || k === "picked") n++;
+    if (k === "picked") break;
+    left -= (k === "group" ? GROUP_PX : ROW_PX) + (i > 0 ? GAP_PX : 0);
+  }
+  return n;
+}
+
+/** The note at the bottom of RESULTS: "3 more ↓", or null with nothing below. */
+export function moreWords(n) {
+  return n > 0 ? `${n} more ↓` : null;
+}
+
+/** What c copies for a picked result row: the code and purpose, the time and result, then
+ *  the report as posted, each on its own line. */
+export function resultCopyText(row) {
+  const { words, report } = row;
+  return [words.purpose ? `${row.code} ${words.purpose}` : row.code, `${words.time} ${words.v}`]
+    .concat(report ? [report.text] : []).join("\n");
+}
+
+/** What c copies for a picked comment: the comment, then its by-line. */
+export function commentCopyText(c) {
+  return `${c.text}\n${c.by}`;
+}
+
+/** How far from a result its report can be, in ms. */
+export const REPORT_NEAR_MS = 10 * 60 * 1000;
+
+/** The report that goes with a result: the report from the tab's terminals (as) posted nearest
+ *  to the result's time (at), within REPORT_NEAR_MS; null when there is none. */
+export function reportFor(posts, as, at) {
+  const set = new Set(as);
+  return posts.filter((p) => p.kind === "report" && set.has(p.terminal) && Math.abs(p.time - at) <= REPORT_NEAR_MS)
+    .reduce((n, p) => (!n || Math.abs(p.time - at) < Math.abs(n.time - at) ? p : n), null);
+}
+
+/** A space heading's count of results: "1 result", "7 results". */
+export function resultCountWords(n) {
+  return `${n} result${n === 1 ? "" : "s"}`;
+}
+
+/** One result row's words: the time as HH:MM, the code, ✕ for a dropped task (else null: a
+ *  ✓ on every row says nothing), the result,
+ *  the tab's purpose (or null), its facts ("before this purpose" for a result older than the
+ *  purpose, todo progress, commits), and the report with ✎ and its time as HH:MM, or nulls. */
+export function resultRowWords(row, commits, report) {
+  const { t } = row;
   const facts = [];
-  if (!last) facts.push("○ no result today");
-  else facts.push(`${/^dropped\b/i.test(last.v) ? "✕" : "✓"} ${last.v}${tab.purposeAt != null && last.at < tab.purposeAt ? " · before this purpose" : ""}`);
-  if (tab.tasks) facts.push(/^todo\b/i.test(tab.tasks) ? tab.tasks : `todo ${tab.tasks}`);
+  if (t.purposeAt != null && row.at < t.purposeAt) facts.push("before this purpose");
+  if (t.tasks) facts.push(/^todo\b/i.test(t.tasks) ? t.tasks : `todo ${t.tasks}`);
   if (commits > 0) facts.push(`${commits} commit${commits === 1 ? "" : "s"}`);
   return {
-    head: tab.purpose ? `${tab.code} ${tab.purpose}` : tab.code, facts: facts.join(" · "),
-    report: report ? `✎ ${report.text}` : null, reportLine: report ? `✎ ${report.text.replace(/\s+/g, " ").trim()}` : null, reportTime: report?.time != null ? clock(report.time) : null,
+    time: clock(row.at), code: t.code, mark: /^dropped\b/i.test(row.v) ? "✕" : null, v: row.v,
+    purpose: t.purpose ?? null, facts: facts.join(" · "),
+    report: report ? `✎ ${report.text}` : null, reportTime: report?.time != null ? clock(report.time) : null,
   };
 }
 
@@ -558,6 +639,7 @@ export const REVIEW_WORDS = {
   went: "HOW IT WENT",
   comments: "COMMENTS",
   timeline: "TIMELINE",
+  timelineHidden: "hidden · t shows it",
   day: "DAY",
   report: "report",
   noNoteLine: "no note today",
@@ -568,8 +650,9 @@ export const REVIEW_WORDS = {
   allDone: "every purpose has a result",
   noPurpose: "no tab has a purpose",
   why: "PLATO was not running",
-  copied: "note copied",
-  noNote: "no note to copy",
+  copied: "copied",
+  noCopy: "nothing to copy",
+  noteNoTab: "the note has no tab",
   noTab: "this comment has no tab",
   nothingPicked: "nothing to pick",
   closes: "or esc closes",
@@ -578,28 +661,28 @@ export const REVIEW_WORDS = {
 
 /** The key line, left to right. Each key is also a click. */
 /** The key line of a page ("day" or "comments"): Tab to the other page, then the page's keys. */
-export function reviewKeys(page) {
+export function reviewKeys(page, bandOpen = true) {
   const onDay = page === "day";
-  return [
+  const keys = [
     { id: "page", keys: ["tab"], words: onDay ? REVIEW_WORDS.comments : REVIEW_WORDS.day },
     { id: "pick", keys: ["↑", "↓"], words: onDay ? "pick a result" : "pick a comment" },
     { id: "look", keys: ["space"], words: "LOOK at its tab" },
     { id: "go", keys: ["↵"], words: "go to the tab" },
-    { id: "copy", keys: ["c"], words: "copy the note" },
+    { id: "copy", keys: ["c"], words: "copy the pick" },
     { id: "day", keys: ["←", "→"], words: "another day" },
   ];
+  // DAY only: t folds the timeline, for more room for RESULTS.
+  return onDay ? [...keys, { id: "band", keys: ["t"], words: bandOpen ? "hide the timeline" : "show the timeline" }] : keys;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const dateOf = (key) => { const [y, m, d] = key.split("-").map(Number); return new Date(y, m - 1, d); };
 
-/** The day the page would open on with every day recorded: before 12:00 the day before, from
- *  12:00 today. Named on a page with no record. */
+/** The day the page would open on with every day recorded: today. Named on a page with no
+ *  record. */
 export function wantedDay(now) {
-  const d = new Date(now);
-  if (d.getHours() < 12) d.setDate(d.getDate() - 1);
-  return dayKey(d.getTime());
+  return dayKey(now);
 }
 
 /** A day's start and the next day's start, in unix seconds (local time), for git log. */

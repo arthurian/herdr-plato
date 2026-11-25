@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { snapshot, changes } from "../day.js";
 import {
   VERBS, POST_KINDS, openDay, stepDay, tabFacts, dayStats, doneCounts, doneShares, openTabs, quietSpaces,
-  parsePost, layoutPosts, countCommits, badge, sourcesLine, resultTabWords, openWords,
+  parsePost, layoutPosts, countCommits, badge, sourcesLine, resultRows, resultRowWords, reportFor, REPORT_NEAR_MS, spaceNames, groupRows, resultCopyText, commentCopyText, resultCountWords, rowsBelow, moreWords, ROW_PX, GROUP_PX, GAP_PX, openWords,
   REVIEW_WORDS, leadSentence, reviewKeys, commentsWords, hitKey, wantedDay, dayBounds, coversWords, commitsByTab, resultTabs, dayWentRows, quietWords,
   ageWords, byline, commentsHead, notOpen, bandLabel, bandMarks, switchBursts, hitIndexForCode, bandHit, nowWords, burstLabels, postNameOrder, postsShown, liveStop, hasTabLabels, openEmpty, dayBand, hitTimes, hitTimeWords, mergeTabs, sumTimes, latestReport,
 } from "../reviewdata.js";
@@ -17,20 +17,16 @@ const open = (t) => ({ t, e: "open" });
 const carry = (t) => ({ t, e: "open", carry: true });
 const close = (t) => ({ t, e: "close" });
 
-test("openDay: before noon opens the newest day before today, skipping a weekend", () => {
-  const mon = new Date(2026, 10, 23, 8).getTime(); // Monday
-  assert.equal(openDay(["2026-11-19", "2026-11-20"], mon), "2026-11-20");
-  assert.equal(openDay(["2026-11-19", "2026-11-20", "2026-11-23"], mon), "2026-11-20");
+test("openDay: opens today at any hour, from midnight", () => {
+  const days = ["2026-11-19", "2026-11-20", "2026-11-23"];
+  assert.equal(openDay(days, new Date(2026, 10, 23, 0, 0, 1).getTime()), "2026-11-23");
+  assert.equal(openDay(days, new Date(2026, 10, 23, 8).getTime()), "2026-11-23");
+  assert.equal(openDay(days, new Date(2026, 10, 23, 23, 59).getTime()), "2026-11-23");
 });
 
-test("openDay: from noon opens today", () => {
-  const noon = new Date(2026, 10, 23, 12).getTime();
-  assert.equal(openDay(["2026-11-20", "2026-11-23"], noon), "2026-11-23");
-});
-
-test("openDay: no days gives null", () => {
+test("openDay: no record for today gives null", () => {
   assert.equal(openDay([], at(9)), null);
-  assert.equal(openDay(["2026-11-19"], at(9)), null);
+  assert.equal(openDay(["2026-11-19"], new Date(2026, 10, 23, 8).getTime()), null);
 });
 
 test("stepDay moves only to days with a record", () => {
@@ -322,24 +318,15 @@ test("badge and sourcesLine words", () => {
   assert.equal(sourcesLine({ hasLabels: true, hasPosts: true, hasGit: false, counting: true }), "day record · tab labels · posts · counting commits");
 });
 
-test("resultTabWords: ✓, ✕ and ○ forms", () => {
-  const tab = { code: "f1", purpose: "Rate-limit the public API", tasks: "7/7", results: [{ v: "fixed x", at: 1 }, { v: "shipped rate limiter", at: 2 }] };
-  assert.deepEqual(resultTabWords(tab, 3, { text: "All green.", time: null }), {
-    head: "f1 Rate-limit the public API", facts: "✓ shipped rate limiter · todo 7/7 · 3 commits", report: "✎ All green.", reportLine: "✎ All green.", reportTime: null,
-  });
-  assert.equal(resultTabWords({ ...tab, results: [{ v: "dropped log cleanup", at: 1 }], tasks: null }, 1, null).facts, "✕ dropped log cleanup · 1 commit");
-  const none = resultTabWords({ code: "g1", purpose: null, tasks: null, results: [] }, 0, null);
-  assert.deepEqual(none, { head: "g1", facts: "○ no result today", report: null, reportLine: null, reportTime: null });
-});
-
 // ---- the page's own words ----
 
 test("REVIEW_WORDS and reviewKeys: the fixed words, and each key line entry has keys and words", () => {
   assert.equal(REVIEW_WORDS.title, "THE PLATO REVIEW");
   assert.equal(REVIEW_WORDS.director, "DIRECTOR");
   assert.equal(REVIEW_WORDS.note, "DIRECTOR'S NOTE");
-  assert.equal(REVIEW_WORDS.copied, "note copied");
-  assert.equal(REVIEW_WORDS.noNote, "no note to copy");
+  assert.equal(REVIEW_WORDS.copied, "copied");
+  assert.equal(REVIEW_WORDS.noCopy, "nothing to copy");
+  assert.equal(REVIEW_WORDS.noteNoTab, "the note has no tab");
   assert.equal(REVIEW_WORDS.more, "tab reads more");
   assert.equal(REVIEW_WORDS.noNoteLine, "no note today");
   assert.equal(REVIEW_WORDS.results, "RESULTS");
@@ -355,10 +342,10 @@ test("REVIEW_WORDS and reviewKeys: the fixed words, and each key line entry has 
   for (const page of ["day", "comments"]) for (const k of reviewKeys(page)) assert.ok(k.keys.length && k.words, k.id);
 });
 
-test("wantedDay: before noon the day before, from noon today", () => {
-  assert.equal(wantedDay(new Date(2026, 10, 23, 8).getTime()), "2026-11-22");
+test("wantedDay: today at any hour", () => {
+  assert.equal(wantedDay(new Date(2026, 10, 23, 0, 0, 1).getTime()), "2026-11-23");
   assert.equal(wantedDay(new Date(2026, 10, 23, 12).getTime()), "2026-11-23");
-  assert.equal(wantedDay(new Date(2026, 11, 1, 9).getTime()), "2026-11-30");
+  assert.equal(wantedDay(new Date(2026, 11, 1, 9).getTime()), "2026-12-01");
 });
 
 test("dayBounds: local midnight to the next, in seconds", () => {
@@ -404,24 +391,6 @@ test("openWords: no purpose, then commits or the age", () => {
   assert.deepEqual(openWords({ code: "f2", purpose: null, days: null, commits: 1 }), { purpose: "(no purpose)", meta: "1 commit" });
   assert.deepEqual(openWords({ code: "f3", purpose: null, days: null, commits: 0 }), { purpose: "(no purpose)", meta: "" });
   assert.deepEqual(openWords({ code: "d1", purpose: "Deploy", days: 1, commits: 0 }), { purpose: "Deploy", meta: ageWords(1) });
-});
-
-test("resultTabWords: a result older than the purpose says so", () => {
-  const t = nt({ code: "f1", purpose: "Pick a way", purposeAt: 2000, results: [{ v: "planned x", at: 1000 }] });
-  assert.match(resultTabWords(t, 0, null).facts, /✓ planned x · before this purpose/);
-  const after = nt({ code: "f1", purpose: "Pick a way", purposeAt: 2000, results: [{ v: "planned x", at: 2000 }] });
-  assert.doesNotMatch(resultTabWords(after, 0, null).facts, /before this purpose/);
-});
-
-test("resultTabWords: reportLine is the report on one line", () => {
-  assert.equal(resultTabWords(nt({}), 0, { text: "First part.\n\nSecond  part.", time: 1 }).reportLine, "✎ First part. Second part.");
-  assert.equal(resultTabWords(nt({}), 0, null).reportLine, null);
-});
-
-test("resultTabWords: the report time as HH:MM, null without a report", () => {
-  const when = new Date(2026, 10, 24, 18, 21).getTime();
-  assert.equal(resultTabWords(nt({}), 0, { text: "r", time: when }).reportTime, "18:21");
-  assert.equal(resultTabWords(nt({}), 0, null).reportTime, null);
 });
 
 test("dayWentRows: sessions, switches, hold, waits, questions and /clear restarts", () => {
@@ -798,13 +767,14 @@ test("commentsWords: COMMENTS with the day's comment count", () => {
 });
 
 test("reviewKeys: Tab first, then the keys of the page", () => {
-  assert.deepEqual(reviewKeys("day").map((k) => k.id), ["page", "pick", "look", "go", "copy", "day"]);
+  assert.deepEqual(reviewKeys("day").map((k) => k.id), ["page", "pick", "look", "go", "copy", "day", "band"]);
   assert.deepEqual(reviewKeys("comments").map((k) => k.id), ["page", "pick", "look", "go", "copy", "day"]);
   assert.deepEqual(reviewKeys("day")[0].keys, ["tab"]);
   assert.equal(reviewKeys("day")[0].words, "COMMENTS");
   assert.equal(reviewKeys("comments")[0].words, "DAY");
   assert.equal(reviewKeys("day")[1].words, "pick a result");
-  assert.equal(reviewKeys("day").find((k) => k.id === "copy").words, "copy the note");
+  assert.equal(reviewKeys("day").find((k) => k.id === "copy").words, "copy the pick");
+  assert.equal(reviewKeys("comments").find((k) => k.id === "copy").words, "copy the pick");
   assert.equal(reviewKeys("comments")[1].words, "pick a comment");
 });
 
@@ -820,4 +790,109 @@ test("leadSentence: the note's first sentence", () => {
   assert.equal(leadSentence("  Two\nlines, one sentence.  "), "Two lines, one sentence.");
   assert.equal(leadSentence("No end mark at all"), "No end mark at all");
   assert.equal(leadSentence(""), "");
+});
+
+test("resultRows: one row per result, newest first, with the tab's place in the list", () => {
+  const f1 = nt({ a: "t1", code: "f1", results: [{ v: "fixed x", at: at(9) }, { v: "shipped y", at: at(15) }] });
+  const c2 = nt({ a: "t2", code: "c2", results: [{ v: "built z", at: at(12) }] });
+  const rows = resultRows([f1, c2]);
+  assert.deepEqual(rows.map((r) => [r.t.code, r.v, r.tab]), [["f1", "shipped y", 0], ["c2", "built z", 1], ["f1", "fixed x", 0]]);
+  assert.deepEqual(resultRows([]), []);
+});
+
+test("resultRows: results at the same time keep the tabs' order", () => {
+  const a = nt({ a: "t1", code: "a1", results: [{ v: "fixed a", at: at(10) }] });
+  const b = nt({ a: "t2", code: "b1", results: [{ v: "fixed b", at: at(10) }] });
+  assert.deepEqual(resultRows([a, b]).map((r) => r.t.code), ["a1", "b1"]);
+});
+
+test("resultRowWords: time, code, mark (✕ only, for a dropped task) and result, then the tab's facts", () => {
+  const t = nt({ code: "f1", purpose: "Rate-limit the public API", tasks: "7/7" });
+  assert.deepEqual(resultRowWords({ t, v: "shipped rate limiter", at: at(15, 31) }, 3, { text: "All green.", time: at(15, 32) }), {
+    time: "15:31", code: "f1", mark: null, v: "shipped rate limiter", purpose: "Rate-limit the public API",
+    facts: "todo 7/7 · 3 commits", report: "✎ All green.", reportTime: "15:32",
+  });
+  const dropped = resultRowWords({ t: nt({ code: "g1" }), v: "dropped log cleanup", at: at(9) }, 1, null);
+  assert.equal(dropped.mark, "✕");
+  assert.equal(dropped.purpose, null);
+  assert.equal(dropped.facts, "1 commit");
+  assert.equal(dropped.report, null);
+  assert.equal(dropped.reportTime, null);
+});
+
+test("resultRowWords: a result older than the tab's purpose says so", () => {
+  const t = nt({ code: "f1", purpose: "Pick a way", purposeAt: 2000 });
+  assert.equal(resultRowWords({ t, v: "planned x", at: 1000 }, 0, null).facts, "before this purpose");
+  assert.equal(resultRowWords({ t, v: "planned x", at: 2000 }, 0, null).facts, "");
+});
+
+test("reportFor: the tab's report nearest to the result, within REPORT_NEAR_MS", () => {
+  const p = (terminal, time, text = "r") => ({ kind: "report", terminal, time, text });
+  const posts = [p("t1", at(9, 1), "early"), p("t1", at(15, 32), "late"), p("t2", at(15, 31), "other tab"), { kind: "comment", terminal: "t1", time: at(15, 31), text: "c" }];
+  assert.equal(reportFor(posts, ["t1"], at(15, 31)).text, "late");
+  assert.equal(reportFor(posts, ["t1"], at(9)).text, "early");
+  assert.equal(reportFor(posts, ["t1"], at(12)), null, "no report near the result");
+  assert.equal(reportFor(posts, ["t1"], at(15, 31) - REPORT_NEAR_MS - 60000), null);
+  assert.equal(reportFor(posts, ["t1", "t2"], at(15, 31)).text, "other tab", "a merged tab's terminals all count");
+});
+
+test("spaceNames: each letter's last name in the day's line events", () => {
+  const ev = [{ t: 1, e: "line", l: "d", n: "old" }, { t: 2, e: "line", l: "d", n: "hxat" }, { t: 2, e: "line", l: "c", n: "herdr-plato" }, { t: 3, e: "line", l: "e", n: null }];
+  assert.deepEqual([...spaceNames(ev)], [["d", "hxat"], ["c", "herdr-plato"]]);
+});
+
+test("groupRows: groups by space in letter order, rows newest first inside, with the place of each child", () => {
+  const t = (code) => nt({ code, letter: code[0] });
+  const [c1, d1, c2] = [t("c1"), t("d1"), t("c2")];
+  const rows = [{ t: c1, v: "shipped z", at: 30 }, { t: d1, v: "tested y", at: 20 }, { t: c2, v: "fixed x", at: 10 }];
+  const groups = groupRows(rows, new Map([["c", "herdr-plato"], ["d", "hxat"]]));
+  assert.deepEqual(groups.map((g) => [g.letter, g.name, g.rows.map((r) => r.v)]), [["c", "herdr-plato", ["shipped z", "fixed x"]], ["d", "hxat", ["tested y"]]]);
+  assert.deepEqual(groupRows([{ t: t("f1"), v: "x", at: 1 }], new Map()).map((g) => g.name), [""], "a space with no name in the record");
+  assert.deepEqual(groupRows([], new Map()), []);
+});
+
+test("rowsBelow: counts the result rows in the hidden part at the bottom of RESULTS", () => {
+  const kinds = ["head", "group", "row", "row", "group", "row", "row", "row"];
+  assert.equal(rowsBelow(kinds, 0), 0, "nothing hidden");
+  assert.equal(rowsBelow(kinds, 1), 0, "a pixel of rounding is not a row");
+  assert.equal(rowsBelow(kinds, 5), 1, "the last row is partly hidden");
+  assert.equal(rowsBelow(kinds, ROW_PX + GAP_PX + 5), 2);
+  assert.equal(rowsBelow(kinds, 3 * (ROW_PX + GAP_PX) + GROUP_PX), 3, "a group heading is not a row");
+  assert.equal(rowsBelow(kinds, 3 * (ROW_PX + GAP_PX) + GROUP_PX + GAP_PX + 5), 4);
+});
+
+test("rowsBelow: stops at the picked row, whose height it does not know", () => {
+  assert.equal(rowsBelow(["head", "group", "row", "picked", "row"], 500), 2);
+  assert.equal(rowsBelow(["head", "group", "row", "row", "other"], ROW_PX + GAP_PX + 5), 1, "the quiet line at the end is not a row");
+});
+
+test("moreWords: the count of rows below, or null", () => {
+  assert.equal(moreWords(3), "3 more ↓");
+  assert.equal(moreWords(0), null);
+});
+
+test("reviewKeys: t hides or shows the timeline, on DAY only", () => {
+  assert.deepEqual(reviewKeys("day", true).find((k) => k.id === "band"), { id: "band", keys: ["t"], words: "hide the timeline" });
+  assert.equal(reviewKeys("day", false).find((k) => k.id === "band").words, "show the timeline");
+  assert.equal(reviewKeys("comments", true).find((k) => k.id === "band"), undefined);
+  assert.equal(REVIEW_WORDS.timelineHidden, "hidden · t shows it");
+});
+
+test("resultCopyText: the code and purpose, the time and result, then the report", () => {
+  const words = { time: "11:59", v: "documented prod state", purpose: "Update the explainer" };
+  assert.equal(resultCopyText({ code: "a1", words, report: { text: "Updated it.\n\nAll good." } }), "a1 Update the explainer\n11:59 documented prod state\nUpdated it.\n\nAll good.");
+  assert.equal(resultCopyText({ code: "g1", words: { ...words, purpose: null }, report: null }), "g1\n11:59 documented prod state");
+});
+
+test("commentCopyText: the comment, then its by-line", () => {
+  assert.equal(commentCopyText({ text: "You approved the same command.", by: "— f2 · 15:12" }), "You approved the same command.\n— f2 · 15:12");
+});
+
+test("resultCountWords: a space heading's count", () => {
+  assert.equal(resultCountWords(1), "1 result");
+  assert.equal(resultCountWords(7), "7 results");
+});
+
+test("GROUP_PX: a space heading is a line with 10 px above it", () => {
+  assert.equal(GROUP_PX, ROW_PX + 10);
 });
