@@ -25,7 +25,7 @@ import { GIT_TIMEOUT_MS } from "./stripdata.js";
 import {
   openDay, stepDay, tabFacts, hasTabLabels, openEmpty, dayBand, hitTimes, hitTimeWords, mergeTabs, sumTimes, hitKey, dayStats, doneCounts, openTabs, quietSpaces, parsePost, layoutPosts,
   countCommits, doneShares, badge, sourcesLine, resultRows, resultRowWords, reportFor, spaceNames, groupRows, resultCopyText, commentCopyText, resultCountWords, rowsBelow, moreWords, REVIEW_WORDS, reviewKeys, wantedDay, dayBounds,
-  coversWords, writtenWords, commitsByTab, resultTabs, dayWentRows, quietWords, openWords, byline, commentsHead, commentsWords, notOpen, bandLabel, bandMarks, switchBursts, bandHit, nowWords, burstLabels,
+  coversWords, writtenWords, dayMarkdown, exportPath, commitsByTab, resultTabs, dayWentRows, quietWords, openWords, byline, commentsHead, commentsWords, notOpen, bandLabel, bandMarks, switchBursts, bandHit, nowWords, burstLabels,
   postNameOrder, postsShown, liveStop, leadSentence,
 } from "./reviewdata.js";
 import { REVIEW, KEYS_BACK, NOTICE, LINE } from "./shared.js";
@@ -35,7 +35,7 @@ const EARLIER = 7; // earlier day files read for the sessions seen before
 /** The dialogs that may open over the page; once they close, the page takes the keyboard back. */
 const OVER = ["look", "jump", "help"];
 /** Key names as the key line writes them. */
-const NAMED = { up: "↑", down: "↓", left: "←", right: "→", enter: "↵", space: "space", c: "c", t: "t", tab: "tab" };
+const NAMED = { up: "↑", down: "↓", left: "←", right: "→", enter: "↵", space: "space", c: "c", e: "e", t: "t", tab: "tab" };
 const CTRL = { p: "↑", n: "↓", b: "←", f: "→" };
 const BAND_ROW = 24, BAND_ROW_MAX = 64, BAND_LABEL = 130; // TIMELINE: the least and most row height and the name column, px
 const OFF_LINES = 12; // TIMELINE: the hatch lines across a stretch PLATO was off
@@ -360,6 +360,21 @@ export default class Review {
     else this.commentScroll.scroll_to_item(Math.max(0, this.sel - this.noteOff()));
   }
 
+  /** Write the day shown to plato-data/exports/YYYY-MM-DD.md, then say where it went. */
+  exportDay(cx) {
+    const file = exportPath(this.model.key), text = dayMarkdown(this.model);
+    cx.spawn(async () => {
+      try {
+        await fs.mkdir(`${this.dir()}/exports`, { recursive: true });
+        await fs.writeFile(`${this.dir()}/${file}`, text);
+        this.notice(`exported to ${DATA}/${file}`);
+      } catch (e) {
+        console.log(`plato review: could not export ${file}: ${e}`);
+        this.notice(REVIEW_WORDS.exportFailed);
+      }
+    });
+  }
+
   notice(text) {
     setShared(NOTICE, { text, at: Date.now() });
   }
@@ -407,6 +422,10 @@ export default class Review {
         cx.write_to_clipboard(text);
         return this.notice(REVIEW_WORDS.copied);
       }
+      case "e":
+        // Export the day shown, DAY and COMMENTS, to one Markdown file; a later export replaces it.
+        if (this.model.empty) return this.notice(REVIEW_WORDS.noExport);
+        return this.exportDay(cx);
     }
   }
 
@@ -433,7 +452,7 @@ export default class Review {
   }
 
   keyLine() {
-    return h_flex().flex_none().flex_wrap().gap_x(18).gap_y(2).pt(4).border_t(1).border_color(C.glow).text_color(C.dim)
+    return h_flex().flex_none().flex_wrap().gap_x(14).gap_y(2).pt(4).border_t(1).border_color(C.glow).text_color(C.dim)
       .children(reviewKeys(this.model.empty ? "day" : this.page, this.bandOpen).filter((k) => !this.model.empty || (k.id !== "page" && k.id !== "band")).map((k, i) => h_flex().gap(4).items_center()
         .children(k.keys.map((key, j) => this.cap(key, `review-key-${i}-${j}`)))
         .child(div().child(k.words))));

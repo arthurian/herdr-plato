@@ -278,6 +278,7 @@ Keys in REVIEW:
 - Enter goes to the picked tab.
 - ← and → show the day before or after. PLATO keeps 60 days.
 - `c` copies what is picked. A result copies with its tab code, purpose, time and report, a comment with its tab and time, and the note in full.
+- `e` exports the day shown to one Markdown file, `plato-data/exports/YYYY-MM-DD.md` in PLATO's data folder. The file has RESULTS with each row's purpose, facts and report, then DONE, OPEN, HOW IT WENT, the director's note and the comments. TIMELINE is a picture, so the file leaves it out. A later export of the same day replaces the file, so each day has one file.
 - `t` hides TIMELINE on DAY, so RESULTS and the facts take its height, and shows it again. A click on the TIMELINE line does the same. REVIEW keeps your choice until Herdr quits.
 - `cmd-j` opens JUMP over REVIEW.
 - Esc, `ctrl-g` or `cmd-shift-r` closes REVIEW. Any move closes it first.

@@ -582,6 +582,41 @@ export function resultCopyText(row) {
     .concat(report ? [report.text] : []).join("\n");
 }
 
+/** Where e writes a day, under the data folder: exports/YYYY-MM-DD.md. */
+export const exportPath = (key) => `exports/${key}.md`;
+
+/** What e writes: the day as Markdown, DAY then COMMENTS, from REVIEW's model. TIMELINE is a
+ *  picture, so it stays out. One file per day: a later export of the day replaces it. */
+export function dayMarkdown(m) {
+  const out = [`# ${REVIEW_WORDS.title} · ${m.key}`, "", [m.badge, m.written].filter(Boolean).join(" · ")];
+  if (m.sources) out.push("", m.sources);
+  out.push("", `## ${REVIEW_WORDS.results}`, "");
+  if (!m.resultRows.length) out.push(REVIEW_WORDS.noResults, "");
+  for (const g of m.resultGroups) {
+    out.push(`### ${g.letter} ${g.name} · ${resultCountWords(g.rows.length)}`, "");
+    for (const h of g.rows) {
+      const w = h.words;
+      out.push(`- ${w.time} ${w.code} ${w.mark ? `${w.mark} ` : ""}${w.v}`);
+      if (w.purpose) out.push(`  - purpose: ${w.purpose}`);
+      if (w.facts) out.push(`  - ${w.facts}`);
+      if (h.time) out.push(`  - time at the tab: ${h.time}`);
+      if (h.report) out.push(`  - ${REVIEW_WORDS.report}${w.reportTime ? ` ${w.reportTime}` : ""}: ${h.report.text.replace(/\s+/g, " ").trim()}`);
+    }
+    out.push("");
+  }
+  if (m.quiet) out.push(m.quiet, "");
+  out.push(`## ${REVIEW_WORDS.done}`, "");
+  out.push(...(m.done.length ? m.done.map((d) => `- ${d.verb}: ${d.n}`) : [REVIEW_WORDS.noneDone]), "");
+  out.push(`## ${REVIEW_WORDS.open}`, "");
+  out.push(...(m.open.length ? m.open.map((r) => { const w = openWords(r); return `- ${r.code} ${w.purpose}${w.meta ? ` · ${w.meta}` : ""}`; }) : [m.openEmpty]), "");
+  out.push(`## ${REVIEW_WORDS.went}`, "", ...m.went.map(([a, b]) => `- ${a}: ${b}`), "");
+  out.push(`## ${REVIEW_WORDS.note}`, "");
+  out.push(...(m.note ? [m.note.text, "", m.note.by] : [REVIEW_WORDS.noNoteLine]), "");
+  out.push(`## ${REVIEW_WORDS.comments}${m.commentsHead ? ` · ${m.commentsHead}` : ""}`, "");
+  for (const c of m.comments) out.push(c.text, "", c.by, "");
+  return `${out.join("\n").trimEnd()}\n`;
+}
+
 /** What c copies for a picked comment: the comment, then its by-line. */
 export function commentCopyText(c) {
   return `${c.text}\n${c.by}`;
@@ -651,6 +686,8 @@ export const REVIEW_WORDS = {
   noPurpose: "no tab has a purpose",
   why: "PLATO was not running",
   copied: "copied",
+  noExport: "nothing to export",
+  exportFailed: "could not export the day",
   noCopy: "nothing to copy",
   noteNoTab: "the note has no tab",
   noTab: "this comment has no tab",
@@ -665,14 +702,15 @@ export function reviewKeys(page, bandOpen = true) {
   const onDay = page === "day";
   const keys = [
     { id: "page", keys: ["tab"], words: onDay ? REVIEW_WORDS.comments : REVIEW_WORDS.day },
-    { id: "pick", keys: ["↑", "↓"], words: onDay ? "pick a result" : "pick a comment" },
-    { id: "look", keys: ["space"], words: "LOOK at its tab" },
-    { id: "go", keys: ["↵"], words: "go to the tab" },
-    { id: "copy", keys: ["c"], words: "copy the pick" },
+    { id: "pick", keys: ["↑", "↓"], words: "pick" },
+    { id: "look", keys: ["space"], words: "LOOK" },
+    { id: "go", keys: ["↵"], words: "go there" },
+    { id: "copy", keys: ["c"], words: "copy" },
+    { id: "export", keys: ["e"], words: "export" },
     { id: "day", keys: ["←", "→"], words: "another day" },
   ];
   // DAY only: t folds the timeline, for more room for RESULTS.
-  return onDay ? [...keys, { id: "band", keys: ["t"], words: bandOpen ? "hide the timeline" : "show the timeline" }] : keys;
+  return onDay ? [...keys, { id: "band", keys: ["t"], words: bandOpen ? "hide timeline" : "show timeline" }] : keys;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

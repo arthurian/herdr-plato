@@ -128,7 +128,7 @@ test("helpScreens: KEYS with one short line each, then WORDS; no lesson or page"
   assert.match(keys.rows.find((r) => r[0] === "TERM")[2], /command palette/);
   assert.deepEqual(keys.rows.find((r) => r[0] === "PICKER")[1], { action: "mod.open:picker" });
   assert.deepEqual(keys.rows.find((r) => r[0] === "RENAME")[1], { action: "space.rename" });
-  assert.match(words.rows.find((r) => r[0] === "in REVIEW")[2], /DAY.*COMMENTS.*a result.*a comment.*copies the note.*closes REVIEW/);
+  assert.match(words.rows.find((r) => r[0] === "in REVIEW")[2], /DAY.*COMMENTS.*a result.*a comment.*copies the pick.*exports the day.*closes REVIEW/);
   assert.equal(keys.rows.find((r) => r[0] === "REVIEW")[2], "Show the day: results, posts and facts.");
   assert.deepEqual(words.rows.map((r) => r[0]), ["letter", "code", "free letter", "WAITING", "the route", "SIGNAL", "in REVIEW", "JUMP", "purpose"]);
   assert.ok(![...keys.rows, ...words.rows].some((r) => /lesson|page/i.test(r[2])), "no lesson or page");

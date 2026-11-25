@@ -4,7 +4,7 @@ import { snapshot, changes } from "../day.js";
 import {
   VERBS, POST_KINDS, openDay, stepDay, tabFacts, dayStats, doneCounts, doneShares, openTabs, quietSpaces,
   parsePost, layoutPosts, countCommits, badge, sourcesLine, resultRows, resultRowWords, reportFor, REPORT_NEAR_MS, spaceNames, groupRows, resultCopyText, commentCopyText, resultCountWords, rowsBelow, moreWords, ROW_PX, GROUP_PX, GAP_PX, openWords,
-  REVIEW_WORDS, leadSentence, reviewKeys, commentsWords, hitKey, wantedDay, dayBounds, coversWords, writtenWords, commitsByTab, resultTabs, dayWentRows, quietWords,
+  REVIEW_WORDS, leadSentence, reviewKeys, commentsWords, hitKey, wantedDay, dayBounds, coversWords, writtenWords, dayMarkdown, exportPath, commitsByTab, resultTabs, dayWentRows, quietWords,
   ageWords, byline, commentsHead, notOpen, bandLabel, bandMarks, switchBursts, hitIndexForCode, bandHit, nowWords, burstLabels, postNameOrder, postsShown, liveStop, hasTabLabels, openEmpty, dayBand, hitTimes, hitTimeWords, mergeTabs, sumTimes, latestReport,
 } from "../reviewdata.js";
 
@@ -767,15 +767,15 @@ test("commentsWords: COMMENTS with the day's comment count", () => {
 });
 
 test("reviewKeys: Tab first, then the keys of the page", () => {
-  assert.deepEqual(reviewKeys("day").map((k) => k.id), ["page", "pick", "look", "go", "copy", "day", "band"]);
-  assert.deepEqual(reviewKeys("comments").map((k) => k.id), ["page", "pick", "look", "go", "copy", "day"]);
+  assert.deepEqual(reviewKeys("day").map((k) => k.id), ["page", "pick", "look", "go", "copy", "export", "day", "band"]);
+  assert.deepEqual(reviewKeys("comments").map((k) => k.id), ["page", "pick", "look", "go", "copy", "export", "day"]);
   assert.deepEqual(reviewKeys("day")[0].keys, ["tab"]);
   assert.equal(reviewKeys("day")[0].words, "COMMENTS");
   assert.equal(reviewKeys("comments")[0].words, "DAY");
-  assert.equal(reviewKeys("day")[1].words, "pick a result");
-  assert.equal(reviewKeys("day").find((k) => k.id === "copy").words, "copy the pick");
-  assert.equal(reviewKeys("comments").find((k) => k.id === "copy").words, "copy the pick");
-  assert.equal(reviewKeys("comments")[1].words, "pick a comment");
+  assert.equal(reviewKeys("day")[1].words, "pick");
+  assert.equal(reviewKeys("day").find((k) => k.id === "copy").words, "copy");
+  assert.equal(reviewKeys("comments").find((k) => k.id === "export").words, "export");
+  assert.equal(reviewKeys("comments")[1].words, "pick");
 });
 
 test("doneShares: each count against the largest, so the largest bar is full", () => {
@@ -872,8 +872,8 @@ test("moreWords: the count of rows below, or null", () => {
 });
 
 test("reviewKeys: t hides or shows the timeline, on DAY only", () => {
-  assert.deepEqual(reviewKeys("day", true).find((k) => k.id === "band"), { id: "band", keys: ["t"], words: "hide the timeline" });
-  assert.equal(reviewKeys("day", false).find((k) => k.id === "band").words, "show the timeline");
+  assert.deepEqual(reviewKeys("day", true).find((k) => k.id === "band"), { id: "band", keys: ["t"], words: "hide timeline" });
+  assert.equal(reviewKeys("day", false).find((k) => k.id === "band").words, "show timeline");
   assert.equal(reviewKeys("comments", true).find((k) => k.id === "band"), undefined);
   assert.equal(REVIEW_WORDS.timelineHidden, "hidden · t shows it");
 });
@@ -903,4 +903,26 @@ test("writtenWords: the newest event's time, on today only", () => {
   assert.equal(writtenWords("2026-11-25", events, now), "record written 10:09");
   assert.equal(writtenWords("2026-11-24", events, now), null);
   assert.equal(writtenWords("2026-11-25", [], now), null);
+});
+
+test("dayMarkdown: DAY then COMMENTS as Markdown, with no TIMELINE", () => {
+  const row = { code: "c1", time: "1 h 5 min", report: { text: "Shipped it.\nAll green." },
+    words: { time: "14:02", code: "c1", mark: null, v: "shipped PLATO v3.2.1", purpose: "Ship PLATO", facts: "2 commits", reportTime: "14:03" } };
+  const m = {
+    key: "2026-11-25", badge: "FACTS + 1 POST · counted 17:20 · so far", written: "record written 17:19", sources: null,
+    resultRows: [row], resultGroups: [{ letter: "c", name: "herdr-plato", rows: [row] }], quiet: "a quiet",
+    done: [{ verb: "shipped", n: 1 }], open: [{ code: "c2", purpose: "Fix keys", days: 0 }], openEmpty: "x",
+    went: [["sessions", "2 · 1 long · 1 quick"]], note: null, comments: [{ text: "You approved it twice.", by: "— c1 · 14:10" }], commentsHead: "1 today · newest first",
+    band: { from: 0, to: 1 },
+  };
+  assert.equal(dayMarkdown(m), [
+    "# THE PLATO REVIEW · 2026-11-25", "", "FACTS + 1 POST · counted 17:20 · so far · record written 17:19", "",
+    "## RESULTS", "", "### c herdr-plato · 1 result", "",
+    "- 14:02 c1 shipped PLATO v3.2.1", "  - purpose: Ship PLATO", "  - 2 commits", "  - time at the tab: 1 h 5 min", "  - report 14:03: Shipped it. All green.", "",
+    "a quiet", "", "## DONE", "", "- shipped: 1", "", "## OPEN", "", "- c2 Fix keys · today", "",
+    "## HOW IT WENT", "", "- sessions: 2 · 1 long · 1 quick", "", "## DIRECTOR'S NOTE", "", "no note today", "",
+    "## COMMENTS · 1 today · newest first", "", "You approved it twice.", "", "— c1 · 14:10", "",
+  ].join("\n"));
+  assert.doesNotMatch(dayMarkdown(m), /TIMELINE/);
+  assert.equal(exportPath("2026-11-25"), "exports/2026-11-25.md");
 });

@@ -137,7 +137,7 @@ const WORD_ROWS = [
   ["WAITING", "", "A space with an agent that needs you. SIGNALS, at the top right, lists them in NEXT1 order."],
   ["the route", "", "The dashed line shows where NEXT1 goes. The ▼ on the line shows where NEXT goes."],
   ["SIGNAL", "", "In FOCUS, a flashing line above the keys names another agent that needs you. Press NEXT1."],
-  ["in REVIEW", "", "Tab switches between DAY and COMMENTS. The arrows pick a result on DAY or a comment on COMMENTS, and Enter goes to its tab. The Space bar opens LOOK for that tab before you go. c copies the note. ← and → show another day. Esc closes REVIEW."],
+  ["in REVIEW", "", "Tab switches between DAY and COMMENTS. The arrows pick a result on DAY or a comment on COMMENTS, and Enter goes to its tab. The Space bar opens LOOK for that tab before you go. c copies the pick, and e exports the day to a Markdown file. ← and → show another day. Esc closes REVIEW."],
   ["JUMP", "", "Type a code, a name, a purpose or a folder. Enter goes to the lit row. Tab shows one group. Esc closes."],
   ["purpose", "", "What a tab is for, on its strip, in LOOK and in JUMP. Yours (set with PURPOSE) comes first, then the agent's, then the session's first prompt."],
 ];
